@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-@k!_c7w_$5p@jsiijv9f@=4wib3(j3+ssn_%zuzv%99(yi&0-@
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -37,6 +37,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
+    'drf_spectacular',
+    'da_app',
 ]
 
 MIDDLEWARE = [
@@ -117,7 +120,32 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+MEDIA_URL = '/data/'
+MEDIA_ROOT = BASE_DIR / 'data'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+REST_FRAMEWORK = {
+'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+
+# No authentication required for API requests
+'DEFAULT_AUTHENTICATION_CLASSES': [],
+
+# Allow unauthenticated access by default
+'DEFAULT_PERMISSION_CLASSES': [
+    'rest_framework.permissions.AllowAny',
+],
+
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Dataset Annotator API",
+    "DESCRIPTION": "API for the Dataset Annotator application",
+    "VERSION": "1.0.0",
+
+    # Important for FileField uploads
+    "COMPONENT_SPLIT_REQUEST": True,
+}
