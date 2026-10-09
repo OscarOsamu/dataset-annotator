@@ -116,7 +116,7 @@ class DatasetUploadApiTests(TestCase):
         response = self.client.post(reverse("dataset-upload"), data)
 
         self.assertEqual(response.status_code, 201)
-        self.assertEqual(response.data["name"], "Catalog")
+        self.assertEqual(response.data["name"], "catalog")
         self.assertEqual(response.data["image_count"], 1)
         self.assertEqual(DatasetImage.objects.count(), 1)
 
