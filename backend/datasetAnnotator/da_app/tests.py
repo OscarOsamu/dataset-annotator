@@ -1,5 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.test import TestCase
+from django.urls import reverse
+from rest_framework.test import APIClient
 
 from .models import Dataset, Image, Question, Answer
 
@@ -85,3 +87,52 @@ class DatasetAnnotationModelsTest(TestCase):
         self.assertTrue(response.is_unclear)
         self.assertIsNone(response.answer_integer)
         self.assertIsNone(response.answer_choices)
+
+
+class ModelApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.dataset = Dataset.objects.create(
+            name="Squirrels",
+            description="A dataset of squirrel images.",
+            archival_path="archives/squirrels.zip",
+        )
+
+    def test_dataset_post_is_only_available_on_upload_endpoint(self):
+        response = self.client.post(
+            reverse("dataset-list"),
+            {"name": "New dataset", "description": ""},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+    def test_dataset_update_only_changes_name_and_description(self):
+        response = self.client.patch(
+            reverse("dataset-detail", args=[self.dataset.pk]),
+            {
+                "name": "Renamed dataset",
+                "archival_path": "changed.zip",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.name, "Renamed dataset")
+        self.assertEqual(self.dataset.archival_path, "archives/squirrels.zip")
+
+    def test_question_api_rejects_invalid_multiple_choice_options(self):
+        response = self.client.post(
+            reverse("question-list"),
+            {
+                "dataset": self.dataset.pk,
+                "text": "What animal is this?",
+                "type": "QCM",
+                "answer_options": [],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("answer_options", response.data)

@@ -131,3 +131,61 @@ class DatasetUploadApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("image files only", response.data["files"][0])
         self.assertFalse(Dataset.objects.exists())
+
+
+@override_settings(MEDIA_ROOT="/tmp/dataset-annotator-image-upload-api-tests")
+class ImageUploadApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.storage_root = Path(settings.MEDIA_ROOT)
+        self.storage_root.mkdir(parents=True, exist_ok=True)
+        self.dataset = Dataset.objects.create(name="cats")
+
+    def tearDown(self):
+        for path in self.storage_root.rglob("*"):
+            if path.is_file():
+                path.unlink()
+        for path in sorted(self.storage_root.rglob("*"), reverse=True):
+            if path.is_dir():
+                path.rmdir()
+
+    def test_image_post_stores_uploaded_file_and_creates_record(self):
+        image_data = io.BytesIO()
+        Image.new("RGB", (2, 2), "green").save(image_data, format="PNG")
+        expected_bytes = image_data.getvalue()
+        upload = SimpleUploadedFile(
+            "cat.png",
+            expected_bytes,
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("image-list"),
+            {"dataset": self.dataset.pk, "file": upload},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        image = DatasetImage.objects.get(dataset=self.dataset)
+        self.assertEqual(response.data["path"], image.path)
+        self.assertTrue(image.path.startswith("cats/data/"))
+        self.assertEqual(
+            (self.storage_root / image.path).read_bytes(),
+            expected_bytes,
+        )
+
+    def test_image_post_rejects_invalid_image_content(self):
+        upload = SimpleUploadedFile(
+            "not-an-image.png",
+            b"not image data",
+            content_type="image/png",
+        )
+
+        response = self.client.post(
+            reverse("image-list"),
+            {"dataset": self.dataset.pk, "file": upload},
+            format="multipart",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(DatasetImage.objects.filter(dataset=self.dataset).exists())

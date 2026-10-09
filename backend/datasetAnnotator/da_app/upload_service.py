@@ -6,7 +6,7 @@ import zipfile
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path, PurePosixPath
-from typing import BinaryIO, Iterable
+from typing import BinaryIO, Iterable, Protocol
 
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
@@ -29,6 +29,10 @@ SUPPORTED_IMAGE_EXTENSIONS = {
     ".tiff",
     ".webp",
 }
+
+
+class ReadableBinaryStream(Protocol):
+    def read(self, size: int = -1, /) -> bytes: ...
 
 
 class DatasetUploadError(ValueError):
@@ -86,7 +90,7 @@ def _is_image_path(path: PurePosixPath) -> bool:
     return path.suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
 
 
-def validate_image(stream: BinaryIO) -> bytes:
+def validate_image(stream: ReadableBinaryStream) -> bytes:
     """Return independent image bytes or raise a validation error."""
     try:
         data = stream.read()
@@ -195,6 +199,44 @@ def _validate_archive_data(archive_data: bytes, filename: str) -> None:
 class DatasetUploadService:
     def __init__(self, storage=default_storage):
         self.storage = storage
+
+    def upload_image(
+        self,
+        dataset: Dataset,
+        uploaded_file: UploadedFile,
+        is_reference_image: bool = False,
+    ) -> Image:
+        if not is_image_file(uploaded_file):
+            raise DatasetUploadError("Upload must be a supported image file.")
+
+        relative_path = safe_relative_path(uploaded_file.name)
+        try:
+            with uploaded_file.open("rb") as stream:
+                image_data = validate_image(stream)
+        except DatasetUploadError:
+            raise
+        except (OSError, ValueError) as exc:
+            raise DatasetUploadError("Could not read the uploaded image.") from exc
+
+        dataset_name = normalize_dataset_name(dataset.name)
+        saved_paths = []
+        try:
+            stored_path = self._save_file(
+                f"{dataset_name}/data/{relative_path.as_posix()}",
+                image_data,
+            )
+            saved_paths.append(stored_path)
+            with transaction.atomic():
+                image = Image.objects.create(
+                    dataset=dataset,
+                    path=stored_path,
+                    is_reference_image=is_reference_image,
+                )
+        except Exception:
+            self._cleanup_saved_files(saved_paths)
+            raise
+
+        return image
 
     def upload(
         self,

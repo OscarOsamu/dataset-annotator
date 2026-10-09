@@ -1,15 +1,26 @@
 
-from rest_framework import serializers, status
+from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
 from drf_spectacular.utils import extend_schema, inline_serializer
 
-from .serializers import DatasetUploadSerializer, SkippedFileSerializer
+from .models import Answer, Dataset, Image, Question
+from .serializers import (
+    AnswerSerializer,
+    DatasetSerializer,
+    DatasetUploadSerializer,
+    ImageSerializer,
+    ImageUploadSerializer,
+    QuestionSerializer,
+    SkippedFileSerializer,
+)
 from .upload_service import DatasetUploadError, DatasetUploadService
 
-
+# ------------------------------------------------------------------------------------------
+#  Dataset
+# ------------------------------------------------------------------------------------------
 
 DatasetUploadResponseSerializer = inline_serializer(
     name="DatasetUploadResponse",
@@ -84,3 +95,49 @@ def dataset_upload(request):
         },
         status=status.HTTP_201_CREATED,
     )
+
+
+# ------------------------------------------------------------------------------------------
+#  Others views
+# ------------------------------------------------------------------------------------------
+
+class DatasetViewSet(
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet,
+):
+    queryset = Dataset.objects.all()
+    serializer_class = DatasetSerializer
+
+
+class ImageViewSet(viewsets.ModelViewSet):
+    queryset = Image.objects.all()
+    serializer_class = ImageSerializer
+    parser_classes = [MultiPartParser]
+
+    @extend_schema(
+        request=ImageUploadSerializer,
+        responses={201: ImageSerializer},
+    )
+    def create(self, request, *args, **kwargs):
+        upload_serializer = ImageUploadSerializer(data=request.data)
+        upload_serializer.is_valid(raise_exception=True)
+        image = upload_serializer.save()
+        response_serializer = ImageSerializer(
+            image,
+            context=self.get_serializer_context(),
+        )
+        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+
+class QuestionViewSet(viewsets.ModelViewSet):
+    queryset = Question.objects.all()
+    serializer_class = QuestionSerializer
+
+
+class AnswerViewSet(viewsets.ModelViewSet):
+    queryset = Answer.objects.all()
+    serializer_class = AnswerSerializer
+
