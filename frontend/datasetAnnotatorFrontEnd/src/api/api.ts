@@ -46,6 +46,9 @@ export interface Dataset {
     'name': string;
     'description'?: string;
     'archival_path': string | null;
+    'question_ids': string;
+    'image_count': string;
+    'annotation_progress': string;
 }
 export interface DatasetRequest {
     'name': string;
@@ -60,6 +63,8 @@ export interface DatasetUploadResponse {
     'description': string;
     'archival_path': string | null;
     'image_count': number;
+    'question_count': number;
+    'annotation_progress': number;
     'total_files': number;
     'skipped_count': number;
     'skipped_files': Array<SkippedFile>;
@@ -110,6 +115,18 @@ export interface Question {
 }
 
 
+export interface QuestionAnswerCount {
+    'value': any;
+    'count': number;
+}
+export interface QuestionInfoResponse {
+    'id': number;
+    'text': string;
+    'type': string;
+    'total_responses': number;
+    'unclear_count': number;
+    'answer_counts': Array<QuestionAnswerCount>;
+}
 export interface QuestionRequest {
     'dataset': number;
     'text': string;
@@ -875,6 +892,39 @@ export const ApiApiAxiosParamCreator = function (configuration?: Configuration) 
         },
         /**
          * 
+         * @param {number} id A unique integer value identifying this question.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiQuestionsInfoRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiQuestionsInfoRetrieve', 'id', id)
+            const localVarPath = `/api/questions/{id}/info/`
+                .replace('{id}', encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -1308,6 +1358,18 @@ export const ApiApiFp = function(configuration?: Configuration) {
         },
         /**
          * 
+         * @param {number} id A unique integer value identifying this question.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiQuestionsInfoRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<QuestionInfoResponse>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiQuestionsInfoRetrieve(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ApiApi.apiQuestionsInfoRetrieve']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
@@ -1565,6 +1627,15 @@ export const ApiApiFactory = function (configuration?: Configuration, basePath?:
          */
         apiQuestionsDestroy(id: number, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.apiQuestionsDestroy(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} id A unique integer value identifying this question.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiQuestionsInfoRetrieve(id: number, options?: RawAxiosRequestConfig): AxiosPromise<QuestionInfoResponse> {
+            return localVarFp.apiQuestionsInfoRetrieve(id, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1827,6 +1898,16 @@ export class ApiApi extends BaseAPI {
      */
     public apiQuestionsDestroy(id: number, options?: RawAxiosRequestConfig) {
         return ApiApiFp(this.configuration).apiQuestionsDestroy(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} id A unique integer value identifying this question.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiQuestionsInfoRetrieve(id: number, options?: RawAxiosRequestConfig) {
+        return ApiApiFp(this.configuration).apiQuestionsInfoRetrieve(id, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

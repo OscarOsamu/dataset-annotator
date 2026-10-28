@@ -10,6 +10,8 @@ Name | Type | Description | Notes
 **description** | **string** |  | [default to undefined]
 **archival_path** | **string** |  | [default to undefined]
 **image_count** | **number** |  | [default to undefined]
+**question_count** | **number** |  | [default to undefined]
+**annotation_progress** | **number** |  | [default to undefined]
 **total_files** | **number** |  | [default to undefined]
 **skipped_count** | **number** |  | [default to undefined]
 **skipped_files** | [**Array&lt;SkippedFile&gt;**](SkippedFile.md) |  | [default to undefined]
@@ -26,6 +28,8 @@ const instance: DatasetUploadResponse = {
     description,
     archival_path,
     image_count,
+    question_count,
+    annotation_progress,
     total_files,
     skipped_count,
     skipped_files,

@@ -24,6 +24,7 @@ All URIs are relative to *http://localhost*
 |[**apiImagesUpdate**](#apiimagesupdate) | **PUT** /api/images/{id}/ | |
 |[**apiQuestionsCreate**](#apiquestionscreate) | **POST** /api/questions/ | |
 |[**apiQuestionsDestroy**](#apiquestionsdestroy) | **DELETE** /api/questions/{id}/ | |
+|[**apiQuestionsInfoRetrieve**](#apiquestionsinforetrieve) | **GET** /api/questions/{id}/info/ | |
 |[**apiQuestionsList**](#apiquestionslist) | **GET** /api/questions/ | |
 |[**apiQuestionsPartialUpdate**](#apiquestionspartialupdate) | **PATCH** /api/questions/{id}/ | |
 |[**apiQuestionsRetrieve**](#apiquestionsretrieve) | **GET** /api/questions/{id}/ | |
@@ -1049,6 +1050,56 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**204** | No response body |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **apiQuestionsInfoRetrieve**
+> QuestionInfoResponse apiQuestionsInfoRetrieve()
+
+
+### Example
+
+```typescript
+import {
+    ApiApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new ApiApi(configuration);
+
+let id: number; //A unique integer value identifying this question. (default to undefined)
+
+const { status, data } = await apiInstance.apiQuestionsInfoRetrieve(
+    id
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **id** | [**number**] | A unique integer value identifying this question. | defaults to undefined|
+
+
+### Return type
+
+**QuestionInfoResponse**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** |  |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

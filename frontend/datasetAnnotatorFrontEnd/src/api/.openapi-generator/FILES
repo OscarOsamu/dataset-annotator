@@ -1,6 +1,5 @@
 .gitignore
 .npmignore
-.openapi-generator-ignore
 api.ts
 base.ts
 common.ts
@@ -17,6 +16,8 @@ docs/PatchedAnswerRequest.md
 docs/PatchedDatasetRequest.md
 docs/PatchedQuestionRequest.md
 docs/Question.md
+docs/QuestionAnswerCount.md
+docs/QuestionInfoResponse.md
 docs/QuestionRequest.md
 docs/SkippedFile.md
 docs/TypeEnum.md

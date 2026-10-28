@@ -9,6 +9,9 @@ Name | Type | Description | Notes
 **name** | **string** |  | [default to undefined]
 **description** | **string** |  | [optional] [default to undefined]
 **archival_path** | **string** |  | [readonly] [default to undefined]
+**question_ids** | **string** |  | [readonly] [default to undefined]
+**image_count** | **string** |  | [readonly] [default to undefined]
+**annotation_progress** | **string** |  | [readonly] [default to undefined]
 
 ## Example
 
@@ -20,6 +23,9 @@ const instance: Dataset = {
     name,
     description,
     archival_path,
+    question_ids,
+    image_count,
+    annotation_progress,
 };
 ```
 

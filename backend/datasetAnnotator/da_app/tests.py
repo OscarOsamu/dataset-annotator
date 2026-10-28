@@ -107,6 +107,27 @@ class ModelApiTests(TestCase):
 
         self.assertEqual(response.status_code, 405)
 
+    def test_dataset_list_includes_question_ids(self):
+        first_question = Question.objects.create(
+            dataset=self.dataset,
+            text="What animal is this?",
+            type="QCM",
+            answer_options=["Squirrel", "Bird"],
+        )
+        second_question = Question.objects.create(
+            dataset=self.dataset,
+            text="How many animals are visible?",
+            type="INT",
+        )
+
+        response = self.client.get(reverse("dataset-list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.data[0]["question_ids"],
+            [first_question.pk, second_question.pk],
+        )
+
     def test_dataset_update_only_changes_name_and_description(self):
         response = self.client.patch(
             reverse("dataset-detail", args=[self.dataset.pk]),

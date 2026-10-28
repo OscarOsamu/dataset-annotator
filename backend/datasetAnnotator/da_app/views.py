@@ -1,6 +1,8 @@
 
+from django.db.models import Prefetch
+
 from rest_framework import mixins, serializers, status, viewsets
-from rest_framework.decorators import api_view, parser_classes
+from rest_framework.decorators import action, api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
@@ -30,12 +32,36 @@ DatasetUploadResponseSerializer = inline_serializer(
         "description": serializers.CharField(),
         "archival_path": serializers.CharField(allow_null=True),
         "image_count": serializers.IntegerField(),
+        "question_count": serializers.IntegerField(),
+        "annotation_progress": serializers.FloatField(),
         "total_files": serializers.IntegerField(),
         "skipped_count": serializers.IntegerField(),
         "skipped_files": SkippedFileSerializer(many=True),
         "message": serializers.CharField(),
     },
 )
+
+QuestionInfoResponseSerializer = inline_serializer(
+    name="QuestionInfoResponse",
+    fields={
+        "id": serializers.IntegerField(),
+        "text": serializers.CharField(),
+        "type": serializers.CharField(),
+        "total_responses": serializers.IntegerField(),
+        "unclear_count": serializers.IntegerField(),
+        "answer_counts": serializers.ListField(
+            child=inline_serializer(
+                name="QuestionAnswerCount",
+                fields={
+                    "value": serializers.JSONField(),
+                    "count": serializers.IntegerField(),
+                },
+            )
+        ),
+    },
+)
+
+
 @extend_schema(
     request=DatasetUploadSerializer,
     responses={
@@ -81,13 +107,11 @@ def dataset_upload(request):
             f"Dataset created. {result.image_count} image(s) imported."
         )
 
+    dataset_data = DatasetSerializer(result.dataset).data
+
     return Response(
         {
-            "id": result.dataset.pk,
-            "name": result.dataset.name,
-            "description": result.dataset.description,
-            "archival_path": result.archival_path,
-            "image_count": result.image_count,
+            **dataset_data,
             "total_files": result.total_files,
             "skipped_count": skipped_count,
             "skipped_files": result.skipped_files,
@@ -108,8 +132,23 @@ class DatasetViewSet(
     mixins.DestroyModelMixin,
     viewsets.GenericViewSet,
 ):
-    queryset = Dataset.objects.all()
     serializer_class = DatasetSerializer
+
+    def get_queryset(self):
+        return Dataset.objects.prefetch_related(
+            Prefetch(
+                "images",
+                queryset=Image.objects.filter(is_reference_image=False).prefetch_related(
+                    "responses"
+                ),
+                to_attr="annotation_images",
+            ),
+            Prefetch(
+                "questions",
+                queryset=Question.objects.order_by("pk"),
+                to_attr="annotation_questions",
+            ),
+        )
 
 
 class ImageViewSet(viewsets.ModelViewSet):
@@ -135,6 +174,60 @@ class ImageViewSet(viewsets.ModelViewSet):
 class QuestionViewSet(viewsets.ModelViewSet):
     queryset = Question.objects.all()
     serializer_class = QuestionSerializer
+
+    @extend_schema(responses=QuestionInfoResponseSerializer)
+    @action(detail=True, methods=["get"], url_path="info")
+    def info(self, request, pk=None):
+        question = self.get_object()
+        responses = question.responses.filter(image__is_reference_image=False)
+        total_responses = responses.count()
+        unclear_count = responses.filter(is_unclear=True).count()
+
+        if question.type == "QCM":
+            answer_counts = [
+                {"value": option, "count": 0}
+                for option in question.answer_options
+            ]
+            values = responses.filter(is_unclear=False).values_list(
+                "answer_choices",
+                flat=True,
+            )
+            for selected_values in values:
+                for selected_value in selected_values or []:
+                    count = next(
+                        (
+                            item
+                            for item in answer_counts
+                            if item["value"] == selected_value
+                        ),
+                        None,
+                    )
+                    if count is not None:
+                        count["count"] += 1
+        else:
+            value_counts = {}
+            values = responses.filter(is_unclear=False).values_list(
+                "answer_integer",
+                flat=True,
+            )
+            for value in values:
+                value_counts[value] = value_counts.get(value, 0) + 1
+            answer_counts = [
+                {"value": value, "count": value_counts[value]}
+                for value in sorted(value_counts)
+            ]
+
+        return Response(
+            {
+                "id": question.pk,
+                "text": question.text,
+                "type": question.type,
+                "total_responses": total_responses,
+                "unclear_count": unclear_count,
+                "answer_counts": answer_counts,
+            }
+        )
+
 
 
 class AnswerViewSet(viewsets.ModelViewSet):
