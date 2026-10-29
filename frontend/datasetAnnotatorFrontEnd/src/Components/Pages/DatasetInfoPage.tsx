@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDatasetInfos } from "../Hooks/useDatasetInfos";
 import { Progress, Tabs } from "antd";
+import { useParams } from "react-router-dom";
 import { ApiApi, type Answer, type Image, type Question } from "../../api";
 import { apiConfig } from "../../configuration";
 import { QuestionsStatsGraphs } from "../Graphs/QuestionsStatsGraphs";
@@ -15,9 +16,10 @@ import {
   RightColumn,
   TwoColumnLayout,
 } from "../Utils/StyledComponents";
+import { ResumeAnnotationButton } from "../Buttons/ResumeAnnotationButton";
 
 export const DatasetInfoPage = () => {
-  const id = window.location.pathname.split("/").pop();
+  const { id } = useParams();
   const { datasetInfos, loading } = useDatasetInfos(Number(id));
   const [questions, setQuestions] = useState<Question[]>([]);
   const [images, setImages] = useState<Image[]>([]);
@@ -46,7 +48,7 @@ export const DatasetInfoPage = () => {
           setImages(
             datasetImages.filter((image) => !image.is_reference_image),
           );
-          setReferenceImages(
+          setReferenceImages( // TODO : make sure not to put those of the wrong dataset
             datasetImages.filter((image) => image.is_reference_image),
           );
           setAnswers(answerResponse.data.filter(
@@ -73,7 +75,10 @@ export const DatasetInfoPage = () => {
 
   return (
     <>
-      <h1>Dataset name: {datasetInfos.name}</h1>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+        <h1>Dataset name: {datasetInfos.name}</h1>
+        <ResumeAnnotationButton datasetId={datasetInfos.id}/>
+      </div>
       <Tabs
         items={[
           {

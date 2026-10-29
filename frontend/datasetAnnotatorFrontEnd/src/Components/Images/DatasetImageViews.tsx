@@ -2,7 +2,10 @@ import { useState } from "react";
 import { Carousel, Empty, Pagination } from "antd";
 import styled from "styled-components";
 import type { Answer, Image, Question } from "../../api";
-import { apiConfig } from "../../configuration";
+import { formatAnswer, getImageUrl } from "../Utils/Annotation";
+import { AppColors } from "../Utils/Colors";
+
+// INTERFACES
 
 interface DatasetImageViewsProps {
   images: Image[];
@@ -20,6 +23,8 @@ interface DatasetImageCarouselProps {
   images: Image[];
 }
 
+// STYLED COMPONENTS
+
 const CarouselViewport = styled.div`
   max-width: 760px;
   margin: 0 auto;
@@ -34,7 +39,7 @@ const ReferenceImage = styled.img`
   width: 100%;
   height: 360px;
   object-fit: contain;
-  background: #101820;
+  background: ${AppColors.COLOR_BLACK};
 
   @media (max-width: 600px) {
     height: 260px;
@@ -71,7 +76,7 @@ const FlipCardButton = styled.button`
   overflow: hidden;
   border: 0;
   border-radius: 6px;
-  background: #101820;
+  background: ${AppColors.COLOR_BLACK};
   color: #fff;
   cursor: pointer;
   text-align: left;
@@ -119,7 +124,7 @@ const ImageDetails = styled(CardFace)`
   inset: 0;
   padding: 18px;
   overflow-y: auto;
-  background: #17232c;
+  background: ${AppColors.COLOR_BG_VERY_DARK};
   transform: rotateY(180deg);
 `;
 
@@ -127,7 +132,7 @@ const FileName = styled.span`
   display: block;
   padding: 10px 12px;
   overflow-wrap: anywhere;
-  background: #17232c;
+  background: ${AppColors.COLOR_BG_VERY_DARK};
   font-weight: 600;
 `;
 
@@ -137,12 +142,12 @@ const AnswerList = styled.dl`
 
 const AnswerItem = styled.div`
   padding: 10px 0;
-  border-top: 1px solid #ffffff2e;
+  border-top: 1px solid ${AppColors.MASK_SELECTED};
 `;
 
 const QuestionText = styled.dt`
   margin-bottom: 4px;
-  color: #c6d0d8;
+  color: ${AppColors.COLOR_CLEAR_TEXT_FOR_DARK_BG};
   font-size: 0.875rem;
 `;
 
@@ -151,25 +156,7 @@ const AnswerText = styled.dd`
   overflow-wrap: anywhere;
 `;
 
-const getImageUrl = (path: string) => {
-  const encodedPath = path
-    .split("/")
-    .map((segment) => encodeURIComponent(segment))
-    .join("/");
-  return `${apiConfig.basePath}/data/${encodedPath}`;
-};
-
-const formatAnswer = (answer: Answer | undefined) => {
-  if (!answer) return "Not answered";
-  if (answer.is_unclear) return "Unclear";
-  if (answer.answer_integer !== undefined && answer.answer_integer !== null) {
-    return String(answer.answer_integer);
-  }
-  if (Array.isArray(answer.answer_choices)) {
-    return answer.answer_choices.map(String).join(", ");
-  }
-  return "Not answered";
-};
+// Components
 
 const ImageCard = ({
   image,

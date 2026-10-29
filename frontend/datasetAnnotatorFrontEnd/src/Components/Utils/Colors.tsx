@@ -5,11 +5,15 @@ export const AppColors  = {
     COLOR_SUCCESS : "#a0d911",
     COLOR_WARNING : "#faad14",
     COLOR_BG : "#d9d9d9",
+    COLOR_CLEAR_TEXT_FOR_DARK_BG : "#c6d0d8",
     COLOR_BG_SIDER : "#0F9C9C",
     COLOR_BG_MENU_ITEMS : "#084E4E",
     COLOR_BG_DARKER : "#032020",
+    COLOR_BG_VERY_DARK : "#17232c",
     COLOR_CONTAINER_BG : "rgba(19,194,194,0.02)",
-    COLOR_STAR : "rgb(255,236,112)"
+    COLOR_STAR : "rgb(255,236,112)",
+    COLOR_BLACK : "#101820;",
+    MASK_SELECTED : "#ffffff2e"
 } as const;
 
 export const themeConfig: ThemeConfig = {

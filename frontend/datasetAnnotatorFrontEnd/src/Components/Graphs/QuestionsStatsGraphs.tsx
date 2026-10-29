@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Alert, Empty, Segmented, Select, Spin } from 'antd';
+import { Empty, Segmented, Select, Spin } from 'antd';
 import type { Question, QuestionInfoResponse } from '../../api';
 import { apiConfig } from '../../configuration';
 import { ApiApi } from '../../api';
 import { Histogram } from './Histogramm';
 import { PieChart } from './PieChart';
+import { useNotify } from '../Contexts/NotificationProvider';
 
 interface QuestionsStatsGraphsProps {
 	questions: Question[];
@@ -15,6 +16,7 @@ type ChartType = 'Pie chart' | 'Histogram';
 export const QuestionsStatsGraphs = ({
 	questions,
 }: QuestionsStatsGraphsProps) => {
+	const notify = useNotify();
 	const [questionStats, setQuestionStats] = useState<QuestionInfoResponse[]>([]);
 	const [selectedQuestionId, setSelectedQuestionId] = useState<number>();
 	const [chartType, setChartType] = useState<ChartType>('Pie chart');
@@ -25,8 +27,6 @@ export const QuestionsStatsGraphs = ({
 		let isCurrent = true;
 		const api = new ApiApi(apiConfig);
 
-		setLoading(true);
-		setError(undefined);
 
 		Promise.all(
 			questions.map(({ id }) => api.apiQuestionsInfoRetrieve(id)),
@@ -51,7 +51,7 @@ export const QuestionsStatsGraphs = ({
 		return () => {
 			isCurrent = false;
 		};
-	}, [questions]);
+	}, [questions, notify]);
 
 	const selectedQuestion = questionStats.find(
 		({ id }) => id === selectedQuestionId,
@@ -59,7 +59,7 @@ export const QuestionsStatsGraphs = ({
 
 	if (loading) return <Spin />;
 	if (error) {
-		return <Alert type="error" message="Question statistics could not be loaded." />;
+		return <Empty description="Question statistics could not be loaded." />;
 	}
 	if (!questions.length) return <Empty description="No questions in this dataset" />;
 	if (!selectedQuestion) return <Empty description="No question statistics available" />;

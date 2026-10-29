@@ -1,33 +1,29 @@
-import React, { createContext, useContext, type ReactNode } from "react";
-import { notification} from "antd";
+/* eslint-disable react-refresh/only-export-components */
+import React, { createContext, useCallback, useContext, type ReactNode } from "react";
+import { notification } from "antd";
 
 type NotificationType = {
-  notify: (title : string, msg: string, type: "success" | "error") => void;
-}
-
-
+  notify: (title: string, msg: string, type: "success" | "error") => void;
+};
 
 const NotificationContext = createContext<NotificationType>({
-  notify: (title : string, msg: string, type: "success" | "error") => {},
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  notify: (title: string, msg: string, type: "success" | "error") => {},
 });
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
 
   const [api, contextHolder] = notification.useNotification();
-  //green in success, red in error
-    const notify = (title: string, msg: string, type: "success" | "error") => {
-
+  const notify = useCallback((title: string, msg: string, type: "success" | "error") => {
     api[type]({
       title: title,
       description: msg,
       placement: "topRight",
       duration: 3,
-      
-      
     });
-  };    
+  }, [api]);
 
-    return (
+  return (
     <NotificationContext.Provider value={{ notify }}>
       {contextHolder}
       {children}

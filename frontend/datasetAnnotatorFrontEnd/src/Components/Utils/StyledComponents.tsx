@@ -55,3 +55,9 @@ export const VerticalSeparator = styled.div`
         display: none;
     }
 `;
+
+export const AnnotationPage = styled.main`
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 28px 24px 48px;
+`;

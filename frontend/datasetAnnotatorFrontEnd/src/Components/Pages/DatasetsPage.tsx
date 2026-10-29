@@ -44,10 +44,7 @@ export const DatasetsPage = () => {
   ];
   /* TODO :
     - add columns :
-      - number of questions 
-      - annotation progression
-      - number of pictures to annnotate
-    - on click open dataset info page
+      - resume annotation
     - breadcrumb
   */
 
