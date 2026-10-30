@@ -1,20 +1,29 @@
 import { useEffect, useState } from 'react';
-import { apiConfig } from '../../configuration';
-import { type Dataset, ApiApi } from '../../api';
+import type { Dataset } from '../../api';
+import { getCachedDatasets, loadDatasets } from './DatasetCache';
 
 export const useDatasets = () => {
-  const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [error, setError] = useState<any>(null);
-  const [datasets, setDatasets] = useState<Dataset[]>([]);
+  const [datasets, setDatasets] = useState<Dataset[]>(() => getCachedDatasets() ?? []);
+  const [loading, setLoading] = useState(() => getCachedDatasets() === undefined);
+  const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
-    const api = new ApiApi(apiConfig);
+    let isCurrent = true;
 
-    api.apiDatasetsList()
-      .then((res) => setDatasets(res.data))
-      .catch((err) => setError(err))
-      .finally(() => setLoading(false));
+    loadDatasets()
+      .then((result) => {
+        if (isCurrent) setDatasets(result);
+      })
+      .catch((requestError: unknown) => {
+        if (isCurrent) setError(requestError);
+      })
+      .finally(() => {
+        if (isCurrent) setLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
   }, []);
 
   return { datasets, loading, error };

@@ -1,83 +1,80 @@
-import { useEffect, useState } from "react";
-import { useDatasetInfos } from "../Hooks/useDatasetInfos";
-import { Progress, Tabs } from "antd";
+import { useEffect } from "react";
+import { Button, Empty, Progress, Space, Spin, Tabs, Typography } from "antd";
 import { useParams } from "react-router-dom";
-import { ApiApi, type Answer, type Image, type Question } from "../../api";
-import { apiConfig } from "../../configuration";
-import { QuestionsStatsGraphs } from "../Graphs/QuestionsStatsGraphs";
+import { useDatasetInfos } from "../Hooks/useDatasetInfos";
 import { useNotify } from "../Contexts/NotificationProvider";
-import TwoColumnPageTemplate from "./Templates/TwoColumnPageTemplate";
+import { QuestionsStatsGraphs } from "../Graphs/QuestionsStatsGraphs";
 import {
   DatasetImageCarousel,
   DatasetImageMasonry,
 } from "../Images/DatasetImageViews";
+import { ResumeAnnotationButton } from "../Buttons/ResumeAnnotationButton";
 import {
   LeftColumn,
   RightColumn,
   TwoColumnLayout,
 } from "../Utils/StyledComponents";
-import { ResumeAnnotationButton } from "../Buttons/ResumeAnnotationButton";
+import TwoColumnPageTemplate from "./Templates/TwoColumnPageTemplate";
+import { DatasetEditTab } from "./DatasetEditTab";
+import { useDatasetContent } from "../Hooks/useDatasetContent";
 
 export const DatasetInfoPage = () => {
   const { id } = useParams();
-  const { datasetInfos, loading } = useDatasetInfos(Number(id));
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [images, setImages] = useState<Image[]>([]);
-  const [referenceImages, setReferenceImages] = useState<Image[]>([]);
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const {
+    datasetInfos,
+    loading,
+    error: datasetError,
+    reload: reloadDataset,
+  } = useDatasetInfos(Number(id));
+  const {
+    images,
+    referenceImages,
+    questions,
+    answers,
+    totalImages,
+    pageNumber,
+    pageSize,
+    canGoToPreviousPage,
+    canGoToNextPage,
+    goToPreviousPage,
+    goToNextPage,
+    loading: contentLoading,
+    error: contentError,
+    reload: reloadContent,
+  } = useDatasetContent(datasetInfos?.id);
   const notify = useNotify();
 
   useEffect(() => {
-    if (!datasetInfos) return;
+    if (datasetError) {
+      notify.notify("Dataset could not be loaded", "Please try again.", "error");
+    }
+  }, [datasetError, notify]);
 
-    let isCurrent = true;
-    const api = new ApiApi(apiConfig);
-    Promise.all([
-      api.apiQuestionsList(),
-      api.apiImagesList(),
-      api.apiAnswersList(),
-    ])
-      .then(([questionResponse, imageResponse, answerResponse]) => {
-        if (isCurrent) {
-          setQuestions(questionResponse.data.filter(
-            (question) => question.dataset === datasetInfos.id,
-          ));
-          const datasetImages = imageResponse.data.filter(
-            (image) => image.dataset === datasetInfos.id,
-          );
-          setImages(
-            datasetImages.filter((image) => !image.is_reference_image),
-          );
-          setReferenceImages( // TODO : make sure not to put those of the wrong dataset
-            datasetImages.filter((image) => image.is_reference_image),
-          );
-          setAnswers(answerResponse.data.filter(
-            (answer) => answer.dataset === datasetInfos.id,
-          ));
-        }
-      })
-      .catch(() => {
-        if (isCurrent) {
-          notify.notify(
-            "Error loading dataset content",
-            "Dataset images, questions, or answers could not be loaded.",
-            "error",
-          );
-        }
-      });
+  useEffect(() => {
+    if (contentError) {
+      notify.notify(
+        "Dataset content could not be loaded",
+        "Images, questions, or answers are unavailable.",
+        "error",
+      );
+    }
+  }, [contentError, notify]);
 
-    return () => {
-      isCurrent = false;
-    };
-  }, [datasetInfos, notify]);
+  if (loading) return <Spin />;
+  if (!datasetInfos) return <Empty description="This dataset could not be found" />;
 
-  if (loading || !datasetInfos) return <div>Loading...</div>;
+  const contentFallback = contentLoading
+    ? <Spin />
+    : <Empty description="Dataset preview is unavailable" />;
+  const cachedQuestionCount = Array.isArray(datasetInfos.question_ids)
+    ? datasetInfos.question_ids.length
+    : questions.length;
 
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
-        <h1>Dataset name: {datasetInfos.name}</h1>
-        <ResumeAnnotationButton datasetId={datasetInfos.id}/>
+        <h1>{datasetInfos.name}</h1>
+        <ResumeAnnotationButton datasetId={datasetInfos.id} />
       </div>
       <Tabs
         items={[
@@ -85,17 +82,14 @@ export const DatasetInfoPage = () => {
             key: "information",
             label: "Information",
             children: (
-              <>
-                <TwoColumnPageTemplate
-                  leftChild={
-                    <>
+              <TwoColumnPageTemplate
+                leftChild={
+                  <>
                     <TwoColumnLayout>
                       <LeftColumn>
                         <p>Description: {datasetInfos.description}</p>
                         <p>Number of images: {datasetInfos.image_count}</p>
-                        <p>
-                          Number of questions: {questions.length}
-                        </p>
+                        <p>Number of questions: {contentLoading ? cachedQuestionCount : questions.length}</p>
                       </LeftColumn>
                       <RightColumn>
                         <div style={{ justifyContent: "center" }}>
@@ -106,16 +100,16 @@ export const DatasetInfoPage = () => {
                           />
                         </div>
                       </RightColumn>
-                    </TwoColumnLayout> 
-                    <DatasetImageCarousel
-                      images={referenceImages}
-                    />
-                    </>
-                  }
-                  rightChild={<QuestionsStatsGraphs questions={questions} />}
-                />
-               
-              </>
+                    </TwoColumnLayout>
+                    {contentLoading || contentError
+                      ? contentFallback
+                      : referenceImages.length > 0 && (
+                        <DatasetImageCarousel images={referenceImages} />
+                      )}
+                  </>
+                }
+                rightChild={<QuestionsStatsGraphs questions={questions} />}
+              />
             ),
           },
           {
@@ -126,11 +120,48 @@ export const DatasetInfoPage = () => {
           {
             key: "images",
             label: "Images",
+            children: contentLoading || contentError
+              ? contentFallback
+              : (
+                <>
+                  <DatasetImageMasonry
+                    images={images}
+                    questions={questions}
+                    answers={answers}
+                  />
+                  <Space
+                    align="center"
+                    style={{ display: "flex", justifyContent: "center", marginTop: 16 }}
+                  >
+                    <Button
+                      disabled={!canGoToPreviousPage}
+                      onClick={goToPreviousPage}
+                    >
+                      Previous images
+                    </Button>
+                    <Typography.Text>
+                      Page {pageNumber} of {Math.max(1, Math.ceil(totalImages / pageSize))}
+                    </Typography.Text>
+                    <Button
+                      disabled={!canGoToNextPage}
+                      onClick={goToNextPage}
+                    >
+                      Next images
+                    </Button>
+                  </Space>
+                </>
+              ),
+          },
+          {
+            key: "edit",
+            label: "Edit",
             children: (
-              <DatasetImageMasonry
-                images={images}
+              <DatasetEditTab
+                dataset={datasetInfos}
+                referenceImages={referenceImages}
                 questions={questions}
-                answers={answers}
+                onDatasetUpdated={reloadDataset}
+                onContentUpdated={reloadContent}
               />
             ),
           },

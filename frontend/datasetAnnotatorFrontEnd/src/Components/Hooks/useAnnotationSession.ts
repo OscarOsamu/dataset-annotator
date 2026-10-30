@@ -1,8 +1,24 @@
 import { useEffect, useState } from "react";
-import { ApiApi, type Answer, type AnswerRequest, type Image, type Question } from "../../api";
+import {
+  ApiApi,
+  type Answer,
+  type AnswerRequest,
+} from "../../api";
 import { apiConfig } from "../../configuration";
 import { useNotify } from "../Contexts/NotificationProvider";
-import { findNextQuestion } from "../Utils/Annotation";
+import {
+  findNextQuestionInIndex,
+  indexAnswersByImage,
+  updateAnswerIndex,
+  type AnswersByImage,
+} from "../Utils/Annotation";
+import {
+  cacheSavedAnswer,
+  loadAnnotationPage,
+  type AnnotationDatasetData,
+  type AnnotationTask,
+} from "../Utils/AnnotationData";
+import { getApiErrorMessage } from "../Utils/ApiErrors.ts";
 
 export type AnnotationPhase = "question" | "recap" | "complete";
 
@@ -12,11 +28,42 @@ export interface AnswerDraft {
   isUnclear: boolean;
 }
 
+interface TaskPageResult {
+  data: AnnotationDatasetData;
+  cursor: number | null;
+  startIndex: number;
+  firstTask?: AnnotationTask;
+}
+
+/** Skip completed pages and return the next page containing work. */
+const loadNextTaskPage = async (
+  datasetId: number,
+  initialCursor: number | null,
+  initialStartIndex: number,
+): Promise<TaskPageResult> => {
+  let cursor = initialCursor;
+  let startIndex = initialStartIndex;
+
+  while (true) {
+    const data = await loadAnnotationPage(datasetId, cursor);
+    const firstTask = data.tasks[0];
+
+    if (firstTask || data.next_cursor === null || data.questions.length === 0) {
+      return { data, cursor, startIndex, firstTask };
+    }
+
+    startIndex += data.images.length;
+    cursor = data.next_cursor;
+  }
+};
+
 export const useAnnotationSession = (datasetId: number) => {
   const notify = useNotify();
-  const [images, setImages] = useState<Image[]>([]);
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Answer[]>([]);
+  const [pageData, setPageData] = useState<AnnotationDatasetData>();
+  const [pageCursor, setPageCursor] = useState<number | null>(null);
+  const [pageStartIndex, setPageStartIndex] = useState(0);
+  const [totalImageCount, setTotalImageCount] = useState(0);
+  const [answersByImage, setAnswersByImage] = useState<AnswersByImage>(new Map());
   const [loadedDatasetId, setLoadedDatasetId] = useState<number>();
   const [imageIndex, setImageIndex] = useState(0);
   const [activeQuestionId, setActiveQuestionId] = useState<number>();
@@ -28,61 +75,54 @@ export const useAnnotationSession = (datasetId: number) => {
     error?: string;
   }>({ datasetId, loading: true });
 
+  const activateTaskPage = (result: TaskPageResult) => {
+    const orderedQuestions = [...result.data.questions].sort(
+      (left, right) => left.id - right.id,
+    );
+    const nextAnswerIndex = indexAnswersByImage(result.data.answers);
+
+    setPageData({ ...result.data, questions: orderedQuestions });
+    if (result.data.total_images !== null) {
+      setTotalImageCount(result.data.total_images);
+    }
+    setPageCursor(result.cursor);
+    setPageStartIndex(result.startIndex);
+    setAnswersByImage(nextAnswerIndex);
+    setLoadedDatasetId(datasetId);
+    setLoadStatus({ datasetId, loading: false });
+
+    if (!result.firstTask) {
+      setPhase("complete");
+      setImageIndex(Math.max(
+        result.startIndex + result.data.images.length - 1,
+        0,
+      ));
+      setActiveQuestionId(undefined);
+      return;
+    }
+
+    const localImageIndex = result.data.images.findIndex(
+      (image) => image.id === result.firstTask?.image_id,
+    );
+    setImageIndex(result.startIndex + localImageIndex);
+    setActiveQuestionId(result.firstTask.question_id);
+    setPhase("question");
+  };
+
   useEffect(() => {
     if (!Number.isInteger(datasetId) || datasetId <= 0) return;
 
     let isCurrent = true;
-    const api = new ApiApi(apiConfig);
-
-    Promise.all([
-      api.apiImagesList(),
-      api.apiQuestionsList(),
-      api.apiAnswersList(),
-    ])
-      .then(([imageResponse, questionResponse, answerResponse]) => {
-        if (!isCurrent) return;
-
-        const datasetImages = imageResponse.data.filter(
-          (image) => image.dataset === datasetId && !image.is_reference_image,
-        );
-        const datasetQuestions = questionResponse.data
-          .filter((question) => question.dataset === datasetId)
-          .sort((left, right) => left.id - right.id);
-        const datasetAnswers = answerResponse.data.filter(
-          (answer) => answer.dataset === datasetId,
-        );
-        const firstPendingIndex = datasetImages.findIndex((image) =>
-          findNextQuestion(image, datasetQuestions, datasetAnswers),
-        );
-
-        setImages(datasetImages);
-        setQuestions(datasetQuestions);
-        setAnswers(datasetAnswers);
-        setLoadedDatasetId(datasetId);
-        setLoadStatus({ datasetId, loading: false });
-
-        if (firstPendingIndex < 0) {
-          setPhase("complete");
-          setImageIndex(Math.max(datasetImages.length - 1, 0));
-          return;
-        }
-
-        const firstPendingImage = datasetImages[firstPendingIndex];
-        setImageIndex(firstPendingIndex);
-        setActiveQuestionId(
-          findNextQuestion(
-            firstPendingImage,
-            datasetQuestions,
-            datasetAnswers,
-          )?.id,
-        );
+    loadNextTaskPage(datasetId, null, 0)
+      .then((result) => {
+        if (isCurrent) activateTaskPage(result);
       })
       .catch(() => {
         if (isCurrent) {
           setLoadStatus({
             datasetId,
             loading: false,
-            error: "Dataset annotation data could not be loaded.",
+            error: "Dataset annotation tasks could not be loaded.",
           });
         }
       });
@@ -90,24 +130,27 @@ export const useAnnotationSession = (datasetId: number) => {
     return () => {
       isCurrent = false;
     };
-  }, [datasetId]);
+  }, [datasetId, activateTaskPage]);
 
   const hasLoadedDataset = loadedDatasetId === datasetId;
-  const currentImages = hasLoadedDataset ? images : [];
-  const currentQuestions = hasLoadedDataset ? questions : [];
-  const currentAnswers = hasLoadedDataset ? answers : [];
-  const currentImage = currentImages[imageIndex];
+  const currentImages = hasLoadedDataset ? pageData?.images ?? [] : [];
+  const currentQuestions = hasLoadedDataset ? pageData?.questions ?? [] : [];
+  const currentAnswerIndex = hasLoadedDataset
+    ? answersByImage
+    : new Map<number, Map<number, Answer>>();
+  const localImageIndex = imageIndex - pageStartIndex;
+  const currentImage = currentImages[localImageIndex];
   const activeQuestion = currentQuestions.find(
     (question) => question.id === activeQuestionId,
   );
-  const existingAnswer = currentAnswers.find(
-    (answer) =>
-      answer.image === currentImage?.id && answer.question === activeQuestionId,
-  );
+  const existingAnswer = currentImage && activeQuestionId
+    ? currentAnswerIndex.get(currentImage.id)?.get(activeQuestionId)
+    : undefined;
   const hasNextImage = currentImages.some(
     (image, index) =>
-      index > imageIndex && findNextQuestion(image, currentQuestions, currentAnswers),
-  );
+      index > localImageIndex &&
+      findNextQuestionInIndex(image, currentQuestions, currentAnswerIndex),
+  ) || pageData?.next_cursor != null;
 
   const saveAnswer = async (draft: AnswerDraft) => {
     if (!currentImage || !activeQuestion) return;
@@ -134,17 +177,14 @@ export const useAnnotationSession = (datasetId: number) => {
         ? await api.apiAnswersPartialUpdate(existingAnswer.id, payload)
         : await api.apiAnswersCreate(payload);
       const savedAnswer = response.data;
-      const updatedAnswers = existingAnswer
-        ? currentAnswers.map((answer) =>
-            answer.id === savedAnswer.id ? savedAnswer : answer,
-          )
-        : [...currentAnswers, savedAnswer];
+      cacheSavedAnswer(datasetId, pageCursor, savedAnswer, activeQuestion);
+      const updatedAnswerIndex = updateAnswerIndex(currentAnswerIndex, savedAnswer);
+      setAnswersByImage(updatedAnswerIndex);
 
-      setAnswers(updatedAnswers);
-      const nextQuestion = findNextQuestion(
+      const nextQuestion = findNextQuestionInIndex(
         currentImage,
         currentQuestions,
-        updatedAnswers,
+        updatedAnswerIndex,
       );
       if (nextQuestion) {
         setActiveQuestionId(nextQuestion.id);
@@ -152,8 +192,12 @@ export const useAnnotationSession = (datasetId: number) => {
         setActiveQuestionId(undefined);
         setPhase("recap");
       }
-    } catch {
-      notify.notify("Answer not saved", "Please try again.", "error");
+    } catch (error) {
+      notify.notify(
+        "Answer not saved",
+        getApiErrorMessage(error, "Please try again."),
+        "error",
+      );
     } finally {
       setSaving(false);
     }
@@ -164,31 +208,62 @@ export const useAnnotationSession = (datasetId: number) => {
     setPhase("question");
   };
 
-  const continueToNextImage = () => {
+  const continueToNextImage = async () => {
     const nextIndex = currentImages.findIndex(
       (image, index) =>
-        index > imageIndex && findNextQuestion(image, currentQuestions, currentAnswers),
+        index > localImageIndex &&
+        findNextQuestionInIndex(image, currentQuestions, currentAnswerIndex),
     );
-    if (nextIndex < 0) {
+    if (nextIndex >= 0) {
+      setImageIndex(pageStartIndex + nextIndex);
+      setActiveQuestionId(
+        findNextQuestionInIndex(
+          currentImages[nextIndex],
+          currentQuestions,
+          currentAnswerIndex,
+        )?.id,
+      );
+      setPhase("question");
+      return;
+    }
+
+    if (pageData?.next_cursor == null) {
       setPhase("complete");
       return;
     }
 
-    setImageIndex(nextIndex);
-    setActiveQuestionId(
-      findNextQuestion(currentImages[nextIndex], currentQuestions, currentAnswers)?.id,
-    );
-    setPhase("question");
+    setLoadStatus({ datasetId, loading: true });
+    try {
+      const result = await loadNextTaskPage(
+        datasetId,
+        pageData.next_cursor,
+        pageStartIndex + currentImages.length,
+      );
+      activateTaskPage(result);
+    } catch (error) {
+      setLoadStatus({
+        datasetId,
+        loading: false,
+        error: getApiErrorMessage(error, "The next annotation page could not be loaded."),
+      });
+      notify.notify(
+        "Could not load the next images",
+        getApiErrorMessage(error, "Please try again."),
+        "error",
+      );
+    }
   };
 
   return {
     images: currentImages,
     questions: currentQuestions,
-    answers: currentAnswers,
+    answersByImage: currentAnswerIndex,
     currentImage,
     activeQuestion,
     existingAnswer,
     imageIndex,
+    imageCount: hasLoadedDataset ? totalImageCount : 0,
+    questionCount: pageData?.questions.length ?? 0,
     phase,
     loading: loadStatus.datasetId !== datasetId || loadStatus.loading,
     saving,

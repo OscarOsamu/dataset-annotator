@@ -23,6 +23,10 @@ import type { RequestArgs } from './base';
 // @ts-ignore
 import { BASE_PATH, COLLECTION_FORMATS, BaseAPI, RequiredError, operationServerMap } from './base';
 
+export interface AnnotationTask {
+    'image_id': number;
+    'question_id': number;
+}
 export interface Answer {
     'id': number;
     'dataset': number;
@@ -49,6 +53,12 @@ export interface Dataset {
     'question_ids': string;
     'image_count': string;
     'annotation_progress': string;
+}
+export interface DatasetAnnotationData {
+    'tasks': Array<AnnotationTask>;
+    'images': Array<Image>;
+    'questions': Array<Question>;
+    'answers': Array<Answer>;
 }
 export interface DatasetRequest {
     'name': string;
@@ -358,6 +368,39 @@ export const ApiApiAxiosParamCreator = function (configuration?: Configuration) 
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
             localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
             localVarRequestOptions.data = serializeDataIfNeeded(answerRequest, localVarRequestOptions, configuration)
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * Return pending image/question pairs and the context needed to answer them.
+         * @param {number} id A unique integer value identifying this dataset.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiDatasetsAnnotationDataRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'id' is not null or undefined
+            assertParamExists('apiDatasetsAnnotationDataRetrieve', 'id', id)
+            const localVarPath = `/api/datasets/{id}/annotation-data/`
+                .replace('{id}', encodeURIComponent(String(id)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = 'application/json';
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
 
             return {
                 url: toPathString(localVarUrlObj),
@@ -1181,6 +1224,18 @@ export const ApiApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
+         * Return pending image/question pairs and the context needed to answer them.
+         * @param {number} id A unique integer value identifying this dataset.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiDatasetsAnnotationDataRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DatasetAnnotationData>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiDatasetsAnnotationDataRetrieve(id, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ApiApi.apiDatasetsAnnotationDataRetrieve']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
          * 
          * @param {number} id A unique integer value identifying this dataset.
          * @param {*} [options] Override http request option.
@@ -1495,6 +1550,15 @@ export const ApiApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.apiAnswersUpdate(id, answerRequest, options).then((request) => request(axios, basePath));
         },
         /**
+         * Return pending image/question pairs and the context needed to answer them.
+         * @param {number} id A unique integer value identifying this dataset.
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiDatasetsAnnotationDataRetrieve(id: number, options?: RawAxiosRequestConfig): AxiosPromise<DatasetAnnotationData> {
+            return localVarFp.apiDatasetsAnnotationDataRetrieve(id, options).then((request) => request(axios, basePath));
+        },
+        /**
          * 
          * @param {number} id A unique integer value identifying this dataset.
          * @param {*} [options] Override http request option.
@@ -1750,6 +1814,16 @@ export class ApiApi extends BaseAPI {
      */
     public apiAnswersUpdate(id: number, answerRequest: AnswerRequest, options?: RawAxiosRequestConfig) {
         return ApiApiFp(this.configuration).apiAnswersUpdate(id, answerRequest, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * Return pending image/question pairs and the context needed to answer them.
+     * @param {number} id A unique integer value identifying this dataset.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiDatasetsAnnotationDataRetrieve(id: number, options?: RawAxiosRequestConfig) {
+        return ApiApiFp(this.configuration).apiDatasetsAnnotationDataRetrieve(id, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

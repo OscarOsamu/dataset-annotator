@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Carousel, Empty, Pagination } from "antd";
+import { Button, Empty, Pagination, Typography } from "antd";
 import styled from "styled-components";
 import type { Answer, Image, Question } from "../../api";
 import { formatAnswer, getImageUrl } from "../Utils/Annotation";
 import { AppColors } from "../Utils/Colors";
+import { AppSizing } from "../Utils/AppStyles";
 
 // INTERFACES
 
@@ -21,6 +22,7 @@ interface ImageCardProps {
 
 interface DatasetImageCarouselProps {
   images: Image[];
+  emptyDescription?: string;
 }
 
 // STYLED COMPONENTS
@@ -34,10 +36,18 @@ const CarouselSlide = styled.div`
   padding: 8px 36px 30px;
 `;
 
+const CarouselControls = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 0;
+`;
+
 const ReferenceImage = styled.img`
   display: block;
   width: 100%;
-  height: 360px;
+  height: ${AppSizing.ImagePreviewHeight};
   object-fit: contain;
   background: ${AppColors.COLOR_BLACK};
 
@@ -210,22 +220,43 @@ const ImageCard = ({
 
 export const DatasetImageCarousel = ({
   images,
+  emptyDescription = "No reference images",
 }: DatasetImageCarouselProps) => {
-  if (images.length === 0) return <Empty description="No reference images" />;
+  const [selectedImageId, setSelectedImageId] = useState(images[0]?.id);
+  const selectedIndex = Math.max(
+    images.findIndex((image) => image.id === selectedImageId),
+    0,
+  );
+  const selectedImage = images[selectedIndex];
+
+  if (images.length === 0) return <Empty description={emptyDescription} />;
 
   return (
     <CarouselViewport>
-      <Carousel arrows>
-        {images.map((image) => (
-          <CarouselSlide key={image.id}>
-            <ReferenceImage
-              src={getImageUrl(image.path)}
-              alt={image.path.split("/").pop() ?? image.path}
-              loading="lazy"
-            />
-          </CarouselSlide>
-        ))}
-      </Carousel>
+      <CarouselSlide>
+        <ReferenceImage
+          src={getImageUrl(selectedImage.path)}
+          alt={selectedImage.path.split("/").pop() ?? selectedImage.path}
+          loading="lazy"
+        />
+      </CarouselSlide>
+      <CarouselControls> // TODO : use default carousel controls
+        <Button
+          disabled={selectedIndex === 0}
+          onClick={() => setSelectedImageId(images[selectedIndex - 1].id)}
+        >
+          Previous
+        </Button>
+        <Typography.Text>
+          {selectedIndex + 1} of {images.length}
+        </Typography.Text>
+        <Button
+          disabled={selectedIndex === images.length - 1}
+          onClick={() => setSelectedImageId(images[selectedIndex + 1].id)}
+        >
+          Next
+        </Button>
+      </CarouselControls>
     </CarouselViewport>
   );
 };
@@ -237,9 +268,10 @@ export const DatasetImageMasonry = ({
 }: DatasetImageViewsProps) => {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 24;
+  const visiblePage = Math.min(currentPage, Math.max(Math.ceil(images.length / pageSize), 1));
   const pageImages = images.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
+    (visiblePage - 1) * pageSize,
+    visiblePage * pageSize,
   );
 
   if (images.length === 0) return <Empty description="No dataset images" />;
@@ -254,8 +286,8 @@ export const DatasetImageMasonry = ({
         ))}
       </MasonryGrid>
       <MasonryPagination>
-        <Pagination
-          current={currentPage}
+        <Pagination />/ to do : use masonry pagination
+          current={visiblePage}
           pageSize={pageSize}
           total={images.length}
           onChange={setCurrentPage}

@@ -8,7 +8,7 @@ import {
   AnnotationWorkbench,
 } from "../Images/AnnotationComponents";
 import { useAnnotationSession } from "../Hooks/useAnnotationSession";
-import { getQuestionAnswerRows } from "../Utils/Annotation";
+import { getQuestionAnswerRowsFromIndex } from "../Utils/Annotation";
 import { useNotify } from "../Contexts/NotificationProvider";
 import { AnnotationPage } from "../Utils/StyledComponents";
 
@@ -61,9 +61,9 @@ const QuestionImagePage = () => {
   }
 
   if (session.phase === "complete" || !session.currentImage) {
-    const description = session.images.length === 0
+    const description = session.imageCount === 0
       ? "This dataset has no images to annotate."
-      : session.questions.length === 0
+      : session.questionCount === 0
         ? "This dataset has no questions to answer."
         : "All images are annotated.";
 
@@ -71,8 +71,8 @@ const QuestionImagePage = () => {
       <AnnotationPage>
         <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={description} />
         <Progress
-          percent={session.images.length ? 100 : 0}
-          format={() => `${session.images.length} / ${session.images.length} images`}
+          percent={session.imageCount ? 100 : 0}
+          format={() => `${session.imageCount} / ${session.imageCount} images`}
         />
         <Button
           style={{ marginTop: 20 }}
@@ -88,12 +88,12 @@ const QuestionImagePage = () => {
   const fileName = currentImage.path.split("/").pop() ?? currentImage.path;
   const progress = Math.round(
     ((session.imageIndex + (session.phase === "recap" ? 1 : 0)) /
-      session.images.length) *
+      session.imageCount) *
       100,
   );
-  const recapRows = getQuestionAnswerRows(
+  const recapRows = getQuestionAnswerRowsFromIndex(
     session.questions,
-    session.answers,
+    session.answersByImage,
     currentImage.id,
   );
 
@@ -101,7 +101,7 @@ const QuestionImagePage = () => {
     <AnnotationPage>
       <AnnotationHeader
         imageIndex={session.imageIndex}
-        imageCount={session.images.length}
+        imageCount={session.imageCount}
         fileName={fileName}
         progress={progress}
       />

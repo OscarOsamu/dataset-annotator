@@ -6,7 +6,7 @@ from rest_framework.decorators import action, api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
-from drf_spectacular.utils import extend_schema, inline_serializer
+from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 
 from .models import Answer, Dataset, Image, Question
 from .serializers import (
@@ -61,6 +61,27 @@ QuestionInfoResponseSerializer = inline_serializer(
     },
 )
 
+AnnotationTaskSerializer = inline_serializer(
+    name="AnnotationTask",
+    fields={
+        "image_id": serializers.IntegerField(),
+        "question_id": serializers.IntegerField(),
+    },
+)
+
+DatasetAnnotationDataSerializer = inline_serializer(
+    name="DatasetAnnotationData",
+    fields={
+        "tasks": serializers.ListField(child=AnnotationTaskSerializer),
+        "images": ImageSerializer(many=True),
+        "reference_images": ImageSerializer(many=True),
+        "questions": QuestionSerializer(many=True),
+        "answers": AnswerSerializer(many=True),
+        "total_images": serializers.IntegerField(allow_null=True),
+        "next_cursor": serializers.IntegerField(allow_null=True),
+    },
+)
+
 
 @extend_schema(
     request=DatasetUploadSerializer,
@@ -86,7 +107,7 @@ def dataset_upload(request):
     try:
         result = DatasetUploadService().upload(
             name=serializer.validated_data["name"],
-            description=serializer.validated_data["description"],
+            description=serializer.validated_data.get("description", ""),
             files=serializer.validated_data["files"],
         )
     except DatasetUploadError as exc:
@@ -135,7 +156,10 @@ class DatasetViewSet(
     serializer_class = DatasetSerializer
 
     def get_queryset(self):
-        return Dataset.objects.prefetch_related(
+        queryset = Dataset.objects.all()
+        if self.action == "annotation_data":
+            return queryset
+        return queryset.prefetch_related(
             Prefetch(
                 "images",
                 queryset=Image.objects.filter(is_reference_image=False).prefetch_related(
@@ -148,6 +172,114 @@ class DatasetViewSet(
                 queryset=Question.objects.order_by("pk"),
                 to_attr="annotation_questions",
             ),
+        )
+
+    @extend_schema(
+        operation_id="api_datasets_annotation_data_retrieve",
+        parameters=[
+            OpenApiParameter(
+                name="cursor",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Return images after this image ID.",
+            ),
+            OpenApiParameter(
+                name="limit",
+                type=int,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Images per page, capped at 200.",
+            ),
+            OpenApiParameter(
+                name="include_reference_images",
+                type=bool,
+                location=OpenApiParameter.QUERY,
+                required=False,
+                description="Include up to one page of reference images.",
+            ),
+        ],
+        responses=DatasetAnnotationDataSerializer,
+    )
+    @action(detail=True, methods=["get"], url_path="annotation-data")
+    def annotation_data(self, request, pk=None):
+        """Return one bounded page of pending image/question pairs."""
+        dataset = self.get_object()
+        try:
+            cursor = int(request.query_params.get("cursor", 0))
+            limit = min(max(int(request.query_params.get("limit", 100)), 1), 200)
+        except (TypeError, ValueError):
+            return Response(
+                {"detail": "Cursor and limit must be integers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if cursor < 0:
+            return Response(
+                {"detail": "Cursor must be zero or greater."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        images_queryset = Image.objects.filter(
+            dataset=dataset,
+            is_reference_image=False,
+        )
+        total_images = images_queryset.count() if cursor == 0 else None
+        page_images = list(
+            images_queryset.filter(pk__gt=cursor).order_by("pk")[:limit + 1]
+        )
+        has_more = len(page_images) > limit
+        images = page_images[:limit]
+        next_cursor = images[-1].pk if has_more and images else None
+        include_reference_images = request.query_params.get(
+            "include_reference_images", "false"
+        ).lower() in {"true", "1"}
+        reference_images = []
+        if include_reference_images and cursor == 0:
+            reference_images = list(
+                Image.objects.filter(
+                    dataset=dataset,
+                    is_reference_image=True,
+                ).order_by("pk")[:limit]
+            )
+        questions = list(Question.objects.filter(dataset=dataset).order_by("pk"))
+        image_ids = [image.pk for image in images]
+        answers = list(
+            Answer.objects.filter(dataset=dataset, image_id__in=image_ids).order_by("pk")
+        )
+
+        answers_by_image = {}
+        for answer in answers:
+            answers_by_image.setdefault(answer.image_id, {})[
+                answer.question_id
+            ] = answer
+
+        tasks = []
+        for image in images:
+            image_answers = answers_by_image.get(image.pk, {})
+            skip_remaining = False
+            for question in questions:
+                if skip_remaining:
+                    continue
+
+                answer = image_answers.get(question.pk)
+                if answer is None:
+                    tasks.append(
+                        {"image_id": image.pk, "question_id": question.pk}
+                    )
+                elif answer.is_unclear and question.skip_next_questions_if_null:
+                    skip_remaining = True
+
+        return Response(
+            {
+                "tasks": tasks,
+                "images": ImageSerializer(images, many=True).data,
+                "reference_images": ImageSerializer(reference_images, many=True).data,
+                "questions": QuestionSerializer(questions, many=True).data,
+                "answers": AnswerSerializer(answers, many=True).data,
+                "total_images": total_images,
+                "next_cursor": next_cursor,
+            }
         )
 
 

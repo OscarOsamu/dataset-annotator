@@ -4,10 +4,12 @@ api.ts
 base.ts
 common.ts
 configuration.ts
+docs/AnnotationTask.md
 docs/Answer.md
 docs/AnswerRequest.md
 docs/ApiApi.md
 docs/Dataset.md
+docs/DatasetAnnotationData.md
 docs/DatasetRequest.md
 docs/DatasetUploadErrorResponse.md
 docs/DatasetUploadResponse.md

@@ -1,24 +1,56 @@
 import { useEffect, useState } from 'react';
-import { apiConfig } from '../../configuration';
-import { type Dataset,  ApiApi } from '../../api';
+import { type Dataset } from '../../api';
+import { getCachedDataset, loadDataset } from './DatasetCache';
 
 export const useDatasetInfos = (id?: number) => {
-  const [loading, setLoading] = useState(true);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [error, setError] = useState<any>(null);
-  const [datasetInfos, setDatasetInfos] = useState<Dataset>();
+  const [datasetState, setDatasetState] = useState<{
+    id?: number;
+    dataset?: Dataset;
+  }>(() => ({ id, dataset: id ? getCachedDataset(id) : undefined }));
+  const [requestState, setRequestState] = useState<{
+    id?: number;
+    loading: boolean;
+    error?: unknown;
+  }>(() => ({ id, loading: true }));
+  const [refreshKey, setRefreshKey] = useState(0);
+  const datasetInfos = datasetState.id === id
+    ? datasetState.dataset
+    : id ? getCachedDataset(id) : undefined;
 
   useEffect(() => {
-    if (!id){
-        return;
+    if (!id) return;
+    if (getCachedDataset(id)) return;
+    let isCurrent = true;
+
+    loadDataset(id)
+      .then((dataset) => {
+        if (isCurrent) {
+          setDatasetState({ id, dataset });
+          setRequestState({ id, loading: false });
+        }
+      })
+      .catch((err: unknown) => {
+        if (isCurrent) setRequestState({ id, loading: false, error: err });
+      })
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [id, refreshKey]);
+
+  const reload = () => {
+    const cachedDataset = id ? getCachedDataset(id) : undefined;
+    if (id && cachedDataset) {
+      setDatasetState({ id, dataset: cachedDataset });
+      return;
     }
-    const api = new ApiApi(apiConfig);
+    setRefreshKey((current) => current + 1);
+  };
 
-    api.apiDatasetsRetrieve(id)
-      .then((res) => setDatasetInfos(res.data))
-      .catch((err) => setError(err))
-      .finally(() => setLoading(false));
-  }, [id]);
-
-  return { datasetInfos, loading, error };
+  return {
+    datasetInfos,
+    loading: !datasetInfos && (requestState.id !== id || requestState.loading),
+    error: requestState.id === id ? requestState.error : undefined,
+    reload,
+  };
 };

@@ -2,10 +2,14 @@ import { Progress, Table, type TableColumnsType } from "antd";
 import { useEffect } from "react";
 import { useDatasets } from "../Hooks/useDatasets";
 import { useNotify } from "../Contexts/NotificationProvider";
+import { DatasetUploadAction } from "../Datasets/DatasetUploadAction";
+import { Space } from "antd";
+import { useNavigate } from "react-router-dom";
 
 export const DatasetsPage = () => {
   const { datasets, loading, error } = useDatasets();
   const notify = useNotify();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (error) {
@@ -50,16 +54,19 @@ export const DatasetsPage = () => {
 
   return (
     <div>
-      <h1>Datasets</h1>
+      <Space style={{ width: "100%", justifyContent: "space-between" }} wrap>
+        <h1>Datasets</h1>
+        <DatasetUploadAction />
+      </Space>
       <h2>Number of datasets: {datasets.length}</h2>
       <Table
         loading={loading}
         dataSource={datasets}
         rowKey="id"
         columns={columns}
-         onRow={(record) => ({
+        onRow={(record) => ({
         onClick: () => {
-          window.location.href = `/dataset/${record.id}`;
+          navigate(`/dataset/${record.id}`);
         },
       })}
 

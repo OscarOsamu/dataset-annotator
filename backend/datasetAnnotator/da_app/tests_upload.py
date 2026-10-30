@@ -10,7 +10,7 @@ from django.urls import reverse
 from PIL import Image
 from rest_framework.test import APIClient
 
-from .models import Dataset, Image as DatasetImage
+from .models import Answer, Dataset, Image as DatasetImage, Question
 from .upload_service import DatasetUploadService
 
 
@@ -120,6 +120,20 @@ class DatasetUploadApiTests(TestCase):
         self.assertEqual(response.data["image_count"], 1)
         self.assertEqual(DatasetImage.objects.count(), 1)
 
+    def test_upload_endpoint_allows_description_to_be_added_later(self):
+        image = io.BytesIO()
+        Image.new("RGB", (2, 2), "blue").save(image, format="PNG")
+        data = {
+            "name": "Catalog",
+            "files": [SimpleUploadedFile("cat.png", image.getvalue(), "image/png")],
+        }
+
+        response = self.client.post(reverse("dataset-upload"), data)
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.data["description"], "")
+        self.assertEqual(Dataset.objects.get().description, "")
+
     def test_upload_endpoint_rejects_non_image_folder(self):
         data = {
             "name": "Invalid",
@@ -131,6 +145,154 @@ class DatasetUploadApiTests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn("image files only", response.data["files"][0])
         self.assertFalse(Dataset.objects.exists())
+
+
+class DatasetAnnotationTasksApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.dataset = Dataset.objects.create(name="birds")
+        self.other_dataset = Dataset.objects.create(name="mammals")
+
+    def test_annotation_tasks_return_pending_pairs_and_scoped_context(self):
+        first_image = DatasetImage.objects.create(
+            dataset=self.dataset,
+            path="birds/data/one.png",
+        )
+        second_image = DatasetImage.objects.create(
+            dataset=self.dataset,
+            path="birds/data/two.png",
+        )
+        DatasetImage.objects.create(
+            dataset=self.dataset,
+            path="birds/data/reference.png",
+            is_reference_image=True,
+        )
+        other_image = DatasetImage.objects.create(
+            dataset=self.other_dataset,
+            path="mammals/data/one.png",
+        )
+        first_question = Question.objects.create(
+            dataset=self.dataset,
+            text="How many birds are visible?",
+            type="INT",
+        )
+        second_question = Question.objects.create(
+            dataset=self.dataset,
+            text="How many wings are visible?",
+            type="INT",
+        )
+        other_question = Question.objects.create(
+            dataset=self.other_dataset,
+            text="How many mammals?",
+            type="INT",
+        )
+        existing_answer = Answer.objects.create(
+            dataset=self.dataset,
+            image=first_image,
+            question=first_question,
+            answer_integer=2,
+        )
+        Answer.objects.create(
+            dataset=self.other_dataset,
+            image=other_image,
+            question=other_question,
+            answer_integer=1,
+        )
+
+        response = self.client.get(
+            f"/api/datasets/{self.dataset.pk}/annotation-data/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            [item["image_id"] for item in response.data["tasks"]],
+            [first_image.pk, second_image.pk, second_image.pk],
+        )
+        self.assertEqual(
+            [item["question_id"] for item in response.data["tasks"]],
+            [second_question.pk, first_question.pk, second_question.pk],
+        )
+        self.assertEqual(
+            [item["id"] for item in response.data["images"]],
+            [first_image.pk, second_image.pk],
+        )
+        self.assertEqual(
+            [item["id"] for item in response.data["questions"]],
+            [first_question.pk, second_question.pk],
+        )
+        self.assertEqual(
+            [item["id"] for item in response.data["answers"]],
+            [existing_answer.pk],
+        )
+        self.assertEqual(response.data["total_images"], 2)
+        self.assertIsNone(response.data["next_cursor"])
+
+    def test_annotation_tasks_are_paginated_by_image_cursor(self):
+        images = [
+            DatasetImage.objects.create(
+                dataset=self.dataset,
+                path=f"birds/data/{index}.png",
+            )
+            for index in range(3)
+        ]
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="How many birds?",
+            type="INT",
+        )
+
+        first_response = self.client.get(
+            f"/api/datasets/{self.dataset.pk}/annotation-data/?limit=2"
+        )
+        second_response = self.client.get(
+            f"/api/datasets/{self.dataset.pk}/annotation-data/",
+            {"limit": 2, "cursor": first_response.data["next_cursor"]},
+        )
+
+        self.assertEqual(first_response.status_code, 200)
+        self.assertEqual(
+            [item["image_id"] for item in first_response.data["tasks"]],
+            [images[0].pk, images[1].pk],
+        )
+        self.assertEqual(first_response.data["total_images"], 3)
+        self.assertEqual(first_response.data["next_cursor"], images[1].pk)
+        self.assertEqual(second_response.status_code, 200)
+        self.assertEqual(
+            second_response.data["tasks"],
+            [{"image_id": images[2].pk, "question_id": question.pk}],
+        )
+        self.assertIsNone(second_response.data["next_cursor"])
+        self.assertIsNone(second_response.data["total_images"])
+
+    def test_annotation_tasks_skip_questions_after_unclear_answer(self):
+        image = DatasetImage.objects.create(
+            dataset=self.dataset,
+            path="birds/data/one.png",
+        )
+        first_question = Question.objects.create(
+            dataset=self.dataset,
+            text="Can you identify this bird?",
+            type="INT",
+            skip_next_questions_if_null=True,
+        )
+        Question.objects.create(
+            dataset=self.dataset,
+            text="How many birds are visible?",
+            type="INT",
+        )
+        Answer.objects.create(
+            dataset=self.dataset,
+            image=image,
+            question=first_question,
+            is_unclear=True,
+        )
+
+        response = self.client.get(
+            f"/api/datasets/{self.dataset.pk}/annotation-data/"
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["tasks"], [])
 
 
 @override_settings(MEDIA_ROOT="/tmp/dataset-annotator-image-upload-api-tests")
