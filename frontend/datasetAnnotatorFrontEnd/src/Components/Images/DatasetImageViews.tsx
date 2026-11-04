@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Empty, Pagination, Typography } from "antd";
+import { Carousel, Empty, Pagination } from "antd";
 import styled from "styled-components";
 import type { Answer, Image, Question } from "../../api";
 import { formatAnswer, getImageUrl } from "../Utils/Annotation";
@@ -12,6 +12,10 @@ interface DatasetImageViewsProps {
   images: Image[];
   questions: Question[];
   answers: Answer[];
+  currentPage?: number;
+  pageSize?: number;
+  totalImages?: number;
+  onPageChange?: (page: number) => void;
 }
 
 interface ImageCardProps {
@@ -36,14 +40,6 @@ const CarouselSlide = styled.div`
   padding: 8px 36px 30px;
 `;
 
-const CarouselControls = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  padding: 12px 0;
-`;
-
 const ReferenceImage = styled.img`
   display: block;
   width: 100%;
@@ -64,12 +60,6 @@ const MasonryGrid = styled.div`
     columns: 2 160px;
     column-gap: 12px;
   }
-`;
-
-const MasonryPagination = styled.div`
-  display: flex;
-  justify-content: center;
-  margin: 20px 0;
 `;
 
 const MasonryItem = styled.div`
@@ -125,8 +115,9 @@ const ImageFace = styled(CardFace)`
 const DatasetImageElement = styled.img`
   display: block;
   width: 100%;
-  height: auto;
-  object-fit: cover;
+  height: clamp(120px, 18vw, 220px);
+  object-fit: contain;
+  background: ${AppColors.COLOR_BLACK};
 `;
 
 const ImageDetails = styled(CardFace)`
@@ -222,41 +213,21 @@ export const DatasetImageCarousel = ({
   images,
   emptyDescription = "No reference images",
 }: DatasetImageCarouselProps) => {
-  const [selectedImageId, setSelectedImageId] = useState(images[0]?.id);
-  const selectedIndex = Math.max(
-    images.findIndex((image) => image.id === selectedImageId),
-    0,
-  );
-  const selectedImage = images[selectedIndex];
-
   if (images.length === 0) return <Empty description={emptyDescription} />;
 
   return (
     <CarouselViewport>
-      <CarouselSlide>
-        <ReferenceImage
-          src={getImageUrl(selectedImage.path)}
-          alt={selectedImage.path.split("/").pop() ?? selectedImage.path}
-          loading="lazy"
-        />
-      </CarouselSlide>
-      <CarouselControls> // TODO : use default carousel controls
-        <Button
-          disabled={selectedIndex === 0}
-          onClick={() => setSelectedImageId(images[selectedIndex - 1].id)}
-        >
-          Previous
-        </Button>
-        <Typography.Text>
-          {selectedIndex + 1} of {images.length}
-        </Typography.Text>
-        <Button
-          disabled={selectedIndex === images.length - 1}
-          onClick={() => setSelectedImageId(images[selectedIndex + 1].id)}
-        >
-          Next
-        </Button>
-      </CarouselControls>
+      <Carousel arrows infinite={false}>
+        {images.map((image) => (
+          <CarouselSlide key={image.id}>
+            <ReferenceImage
+              src={getImageUrl(image.path)}
+              alt={image.path.split("/").pop() ?? image.path}
+              loading="lazy"
+            />
+          </CarouselSlide>
+        ))}
+      </Carousel>
     </CarouselViewport>
   );
 };
@@ -265,35 +236,32 @@ export const DatasetImageMasonry = ({
   images,
   questions,
   answers,
+  currentPage = 1,
+  pageSize = 24,
+  totalImages,
+  onPageChange,
 }: DatasetImageViewsProps) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const pageSize = 24;
-  const visiblePage = Math.min(currentPage, Math.max(Math.ceil(images.length / pageSize), 1));
-  const pageImages = images.slice(
-    (visiblePage - 1) * pageSize,
-    visiblePage * pageSize,
-  );
+  const totalCount = Math.max(totalImages ?? images.length, images.length);
 
   if (images.length === 0) return <Empty description="No dataset images" />;
 
   return (
     <>
       <MasonryGrid>
-        {pageImages.map((image) => (
+        {images.map((image) => (
           <MasonryItem key={image.id}>
             <ImageCard image={image} questions={questions} answers={answers} />
           </MasonryItem>
         ))}
       </MasonryGrid>
-      <MasonryPagination>
-        <Pagination />/ to do : use masonry pagination
-          current={visiblePage}
-          pageSize={pageSize}
-          total={images.length}
-          onChange={setCurrentPage}
-          showSizeChanger={false}
-        />
-      </MasonryPagination>
+      <Pagination
+        current={currentPage}
+        pageSize={pageSize}
+        total={totalCount}
+        onChange={onPageChange}
+        showSizeChanger={false}
+        style={{ display: "flex", justifyContent: "center", marginTop: 20 }}
+      />
     </>
   );
 };

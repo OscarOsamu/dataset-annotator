@@ -66,7 +66,6 @@ class DatasetUploadSerializer(serializers.Serializer):
 class DatasetSerializer(serializers.ModelSerializer):
     question_ids = serializers.SerializerMethodField()
     image_count = serializers.SerializerMethodField()
-    annotation_progress = serializers.SerializerMethodField()
 
     class Meta:
         model = Dataset
@@ -77,10 +76,10 @@ class DatasetSerializer(serializers.ModelSerializer):
             "archival_path",
             "question_ids",
             "image_count",
+            "answer_count",
             "annotation_progress",
         ]
-        read_only_fields = ["id", "archival_path"]
-
+        read_only_fields = ["id", "archival_path", "answer_count", "annotation_progress"]
 
     def get_question_ids(self, dataset):
         questions = getattr(dataset, "annotation_questions", None)
@@ -93,48 +92,6 @@ class DatasetSerializer(serializers.ModelSerializer):
         if images is not None:
             return len(images)
         return dataset.images.filter(is_reference_image=False).count()
-
-    def get_annotation_progress(self, dataset):
-        questions = getattr(dataset, "annotation_questions", None)
-        if questions is None:
-            questions = list(dataset.questions.order_by("pk"))
-
-        images = getattr(dataset, "annotation_images", None)
-        if images is None:
-            images = list(
-                dataset.images.filter(is_reference_image=False).prefetch_related(
-                    "responses"
-                )
-            )
-
-        if not questions or not images:
-            return 0.0
-
-        completed_images = 0
-        for image in images:
-            answers = {
-                response.question_id: response
-                for response in image.responses.all()
-            }
-            skipped = False
-            complete = True
-
-            for question in questions:
-                if skipped:
-                    continue
-
-                response = answers.get(question.pk)
-                if response is None:
-                    complete = False
-                    break
-
-                if response.is_unclear and question.skip_next_questions_if_null:
-                    skipped = True
-
-            if complete:
-                completed_images += 1
-
-        return round(completed_images * 100 / len(images), 2)
 
 
 class ImageSerializer(serializers.ModelSerializer):

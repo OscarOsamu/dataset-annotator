@@ -88,6 +88,77 @@ class DatasetAnnotationModelsTest(TestCase):
         self.assertIsNone(response.answer_integer)
         self.assertIsNone(response.answer_choices)
 
+    def test_dataset_annotation_progress_updates_on_answer_save(self):
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="What color is this squirrel?",
+            type="QCM",
+            answer_options=["Brown", "Gray"],
+        )
+        second_image = Image.objects.create(
+            dataset=self.dataset,
+            path="/images/squirrel-2.jpg",
+        )
+
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.annotation_progress, 0.0)
+
+        Answer.objects.create(
+            dataset=self.dataset,
+            image=self.image,
+            question=question,
+            answer_choices=["Brown"],
+        )
+
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.annotation_progress, 50.0)
+
+        Answer.objects.create(
+            dataset=self.dataset,
+            image=second_image,
+            question=question,
+            answer_choices=["Gray"],
+        )
+
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.annotation_progress, 100.0)
+
+    def test_dataset_tracks_related_answer_count_for_lightweight_progress(self):
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="What color is this squirrel?",
+            type="QCM",
+            answer_options=["Brown", "Gray"],
+        )
+        second_image = Image.objects.create(
+            dataset=self.dataset,
+            path="/images/squirrel-2.jpg",
+        )
+
+        self.assertEqual(self.dataset.answer_count, 0)
+
+        Answer.objects.create(
+            dataset=self.dataset,
+            image=self.image,
+            question=question,
+            answer_choices=["Brown"],
+        )
+
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.answer_count, 1)
+        self.assertEqual(self.dataset.annotation_progress, 50.0)
+
+        Answer.objects.create(
+            dataset=self.dataset,
+            image=second_image,
+            question=question,
+            answer_choices=["Gray"],
+        )
+
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.answer_count, 2)
+        self.assertEqual(self.dataset.annotation_progress, 100.0)
+
 
 class ModelApiTests(TestCase):
     def setUp(self):

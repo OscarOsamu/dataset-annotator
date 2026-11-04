@@ -159,12 +159,11 @@ class DatasetViewSet(
         queryset = Dataset.objects.all()
         if self.action == "annotation_data":
             return queryset
+
         return queryset.prefetch_related(
             Prefetch(
                 "images",
-                queryset=Image.objects.filter(is_reference_image=False).prefetch_related(
-                    "responses"
-                ),
+                queryset=Image.objects.filter(is_reference_image=False),
                 to_attr="annotation_images",
             ),
             Prefetch(

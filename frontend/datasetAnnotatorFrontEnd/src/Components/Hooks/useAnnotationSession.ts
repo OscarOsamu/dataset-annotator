@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   ApiApi,
   type Answer,
@@ -75,7 +75,7 @@ export const useAnnotationSession = (datasetId: number) => {
     error?: string;
   }>({ datasetId, loading: true });
 
-  const activateTaskPage = (result: TaskPageResult) => {
+  const activateTaskPage = useCallback((result: TaskPageResult) => {
     const orderedQuestions = [...result.data.questions].sort(
       (left, right) => left.id - right.id,
     );
@@ -107,7 +107,7 @@ export const useAnnotationSession = (datasetId: number) => {
     setImageIndex(result.startIndex + localImageIndex);
     setActiveQuestionId(result.firstTask.question_id);
     setPhase("question");
-  };
+  }, [datasetId]);
 
   useEffect(() => {
     if (!Number.isInteger(datasetId) || datasetId <= 0) return;

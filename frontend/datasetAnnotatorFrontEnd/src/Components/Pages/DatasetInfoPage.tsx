@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Button, Empty, Progress, Space, Spin, Tabs, Typography } from "antd";
+import { Empty, Progress, Spin, Tabs } from "antd";
 import { useParams } from "react-router-dom";
 import { useDatasetInfos } from "../Hooks/useDatasetInfos";
 import { useNotify } from "../Contexts/NotificationProvider";
@@ -63,6 +63,21 @@ export const DatasetInfoPage = () => {
   if (loading) return <Spin />;
   if (!datasetInfos) return <Empty description="This dataset could not be found" />;
 
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage === pageNumber) return;
+
+    if (nextPage > pageNumber) {
+      for (let page = pageNumber; page < nextPage; page += 1) {
+        goToNextPage();
+      }
+      return;
+    }
+
+    for (let page = pageNumber; page > nextPage; page -= 1) {
+      goToPreviousPage();
+    }
+  };
+
   const contentFallback = contentLoading
     ? <Spin />
     : <Empty description="Dataset preview is unavailable" />;
@@ -123,33 +138,15 @@ export const DatasetInfoPage = () => {
             children: contentLoading || contentError
               ? contentFallback
               : (
-                <>
-                  <DatasetImageMasonry
-                    images={images}
-                    questions={questions}
-                    answers={answers}
-                  />
-                  <Space
-                    align="center"
-                    style={{ display: "flex", justifyContent: "center", marginTop: 16 }}
-                  >
-                    <Button
-                      disabled={!canGoToPreviousPage}
-                      onClick={goToPreviousPage}
-                    >
-                      Previous images
-                    </Button>
-                    <Typography.Text>
-                      Page {pageNumber} of {Math.max(1, Math.ceil(totalImages / pageSize))}
-                    </Typography.Text>
-                    <Button
-                      disabled={!canGoToNextPage}
-                      onClick={goToNextPage}
-                    >
-                      Next images
-                    </Button>
-                  </Space>
-                </>
+                <DatasetImageMasonry
+                  images={images}
+                  questions={questions}
+                  answers={answers}
+                  currentPage={pageNumber}
+                  pageSize={pageSize}
+                  totalImages={totalImages}
+                  onPageChange={handlePageChange}
+                />
               ),
           },
           {

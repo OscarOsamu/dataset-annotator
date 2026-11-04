@@ -13,9 +13,31 @@ class Dataset(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     archival_path = models.CharField(max_length=500, null=True, blank=True)
+    annotation_progress = models.FloatField(default=0.0)
+    answer_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         ordering = ["name"]
+
+    def recalculate_annotation_progress(self):
+        total_questions = self.questions.count()
+        total_images = self.images.filter(is_reference_image=False).count()
+        self.answer_count = self.responses.count()
+
+        if not total_questions or not total_images:
+            self.annotation_progress = 0.0
+            return self
+
+        total_answer_slots = total_questions * total_images
+        if total_answer_slots == 0:
+            self.annotation_progress = 0.0
+            return self
+
+        self.annotation_progress = round(
+            (self.answer_count * 100.0) / total_answer_slots,
+            2,
+        )
+        return self
 
     def __str__(self):
         return self.name
@@ -368,7 +390,17 @@ class Answer(models.Model):
 
     def save(self, *args, **kwargs):
         self.full_clean()
-        return super().save(*args, **kwargs)
+        saved = super().save(*args, **kwargs)
+        self.dataset.recalculate_annotation_progress()
+        self.dataset.save(update_fields=["annotation_progress", "answer_count"])
+        return saved
+
+    def delete(self, *args, **kwargs):
+        dataset = self.dataset
+        deleted = super().delete(*args, **kwargs)
+        dataset.recalculate_annotation_progress()
+        dataset.save(update_fields=["annotation_progress", "answer_count"])
+        return deleted
 
     def __str__(self):
         return f"Response for {self.question} on {self.image}"
