@@ -53,11 +53,11 @@ const ReferenceImage = styled.img`
 `;
 
 const MasonryGrid = styled.div`
-  columns: 3 220px;
+  columns: 220px;
   column-gap: 16px;
 
   @media (max-width: 700px) {
-    columns: 2 160px;
+    columns: 160px;
     column-gap: 12px;
   }
 `;
@@ -71,7 +71,6 @@ const FlipCardButton = styled.button`
   display: block;
   position: relative;
   width: 100%;
-  min-height: 180px;
   padding: 0;
   overflow: hidden;
   border: 0;
@@ -115,9 +114,9 @@ const ImageFace = styled(CardFace)`
 const DatasetImageElement = styled.img`
   display: block;
   width: 100%;
-  height: clamp(120px, 18vw, 220px);
+  height: auto;
+  max-height: 220px;
   object-fit: contain;
-  background: ${AppColors.COLOR_BLACK};
 `;
 
 const ImageDetails = styled(CardFace)`

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button, Checkbox, InputNumber, Progress, Radio, Typography } from "antd";
+import { Button, Checkbox, Image, InputNumber, Progress, Radio, Typography } from "antd";
 import styled from "styled-components";
 import type { Answer, Question } from "../../api";
 import type { AnswerDraft } from "../Hooks/useAnnotationSession";
@@ -42,11 +42,15 @@ const ImagePanel = styled.div`
   background: #182522;
 `;
 
-const DatasetImage = styled.img`
-  display: block;
-  max-width: 100%;
-  max-height: 68vh;
-  object-fit: contain;
+const DatasetImage = styled(Image)`
+  width: 100%;
+
+  img {
+    display: block;
+    width: 100%;
+    height: min(68vh, 720px);
+    object-fit: contain;
+  }
 `;
 
 const QuestionPanel = styled.section`
