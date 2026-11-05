@@ -5,6 +5,7 @@ import { useNotify } from "../Contexts/NotificationProvider";
 import { DatasetUploadAction } from "../Datasets/DatasetUploadAction";
 import { Space } from "antd";
 import { useNavigate } from "react-router-dom";
+import AppBreadcrumb from "../AppBreadcrumbs";
 
 export const DatasetsPage = () => {
   const { datasets, loading, error } = useDatasets();
@@ -19,7 +20,7 @@ export const DatasetsPage = () => {
   }, [error, notify]);
 
   const columns: TableColumnsType = [
-   {
+    {
       title: "Dataset Name",
       dataIndex: "name",
       key: "name",
@@ -49,11 +50,11 @@ export const DatasetsPage = () => {
   /* TODO :
     - add columns :
       - resume annotation
-    - breadcrumb
   */
 
   return (
     <div>
+      <AppBreadcrumb />
       <Space style={{ width: "100%", justifyContent: "space-between" }} wrap>
         <h1>Datasets</h1>
         <DatasetUploadAction />
@@ -65,11 +66,10 @@ export const DatasetsPage = () => {
         rowKey="id"
         columns={columns}
         onRow={(record) => ({
-        onClick: () => {
-          navigate(`/dataset/${record.id}`);
-        },
-      })}
-
+          onClick: () => {
+            navigate(`/dataset/${record.id}`);
+          },
+        })}
       />
     </div>
   );

@@ -124,7 +124,7 @@ export const AnnotationHeader = ({
       </Typography.Title>
     </div>
     <div style={{ width: 220, maxWidth: "100%" }}>
-      <Progress percent={progress} showInfo={false} />
+      <Progress percent={progress} showInfo={true} />
     </div>
   </Header>
 );

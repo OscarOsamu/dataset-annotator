@@ -1,9 +1,9 @@
 import { Divider, Typography } from "antd";
-import type { Dataset, Image, Question } from "../../api";
-import { DatasetDetailsForm } from "../Datasets/DatasetDetailsForm";
-import { DatasetQuestionsPanel } from "../Datasets/DatasetQuestionsPanel";
-import { ReferenceImageUpload } from "../Datasets/ReferenceImageUpload";
-import { DatasetImageCarousel } from "../Images/DatasetImageViews";
+import type { Dataset, Image, Question } from "../../api/index.ts";
+import { DatasetDetailsForm } from "../Datasets/DatasetDetailsForm.tsx";
+import { DatasetQuestionsPanel } from "../Datasets/DatasetQuestionsPanel.tsx";
+import { ReferenceImageUpload } from "../Datasets/ReferenceImageUpload.tsx";
+import { DatasetImageCarousel } from "../Images/DatasetImageViews.tsx";
 import { AppSpacing } from "../Utils/AppStyles.tsx";
 
 interface DatasetEditTabProps {

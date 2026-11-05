@@ -9,6 +9,7 @@ import { DatasetImageCarousel } from "../Images/DatasetImageViews";
 import { DatasetDetailsForm } from "../Datasets/DatasetDetailsForm";
 import { DatasetQuestionsPanel } from "../Datasets/DatasetQuestionsPanel";
 import { DatasetSummary, SetupPage, SetupSection } from "../Utils/DatasetSetupStyles";
+import AppBreadcrumb from "../AppBreadcrumbs";
 
 export const DatasetSetupPage = () => {
   const { id } = useParams();
@@ -59,6 +60,7 @@ export const DatasetSetupPage = () => {
 
   return (
     <SetupPage>
+      <AppBreadcrumb/>
       <Typography.Title level={1}>Set up {datasetInfos.name}</Typography.Title>
       <Typography.Paragraph type="secondary">
         Add context for this dataset, review the uploaded images, and prepare annotation questions.

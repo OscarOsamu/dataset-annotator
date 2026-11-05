@@ -15,8 +15,9 @@ import {
   TwoColumnLayout,
 } from "../Utils/StyledComponents";
 import TwoColumnPageTemplate from "./Templates/TwoColumnPageTemplate";
-import { DatasetEditTab } from "./DatasetEditTab";
+import { DatasetEditTab } from "../Tabs/DatasetEditTab";
 import { useDatasetContent } from "../Hooks/useDatasetContent";
+import AppBreadcrumb from "../AppBreadcrumbs";
 
 export const DatasetInfoPage = () => {
   const { id } = useParams();
@@ -34,8 +35,6 @@ export const DatasetInfoPage = () => {
     totalImages,
     pageNumber,
     pageSize,
-    canGoToPreviousPage,
-    canGoToNextPage,
     goToPreviousPage,
     goToNextPage,
     loading: contentLoading,
@@ -46,7 +45,11 @@ export const DatasetInfoPage = () => {
 
   useEffect(() => {
     if (datasetError) {
-      notify.notify("Dataset could not be loaded", "Please try again.", "error");
+      notify.notify(
+        "Dataset could not be loaded",
+        "Please try again.",
+        "error",
+      );
     }
   }, [datasetError, notify]);
 
@@ -61,7 +64,8 @@ export const DatasetInfoPage = () => {
   }, [contentError, notify]);
 
   if (loading) return <Spin />;
-  if (!datasetInfos) return <Empty description="This dataset could not be found" />;
+  if (!datasetInfos)
+    return <Empty description="This dataset could not be found" />;
 
   const handlePageChange = (nextPage: number) => {
     if (nextPage === pageNumber) return;
@@ -78,16 +82,27 @@ export const DatasetInfoPage = () => {
     }
   };
 
-  const contentFallback = contentLoading
-    ? <Spin />
-    : <Empty description="Dataset preview is unavailable" />;
+  const contentFallback = contentLoading ? (
+    <Spin />
+  ) : (
+    <Empty description="Dataset preview is unavailable" />
+  );
   const cachedQuestionCount = Array.isArray(datasetInfos.question_ids)
     ? datasetInfos.question_ids.length
     : questions.length;
 
   return (
     <>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, flexWrap: "wrap" }}>
+      <AppBreadcrumb />
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
         <h1>{datasetInfos.name}</h1>
         <ResumeAnnotationButton datasetId={datasetInfos.id} />
       </div>
@@ -104,7 +119,12 @@ export const DatasetInfoPage = () => {
                       <LeftColumn>
                         <p>Description: {datasetInfos.description}</p>
                         <p>Number of images: {datasetInfos.image_count}</p>
-                        <p>Number of questions: {contentLoading ? cachedQuestionCount : questions.length}</p>
+                        <p>
+                          Number of questions:{" "}
+                          {contentLoading
+                            ? cachedQuestionCount
+                            : questions.length}
+                        </p>
                       </LeftColumn>
                       <RightColumn>
                         <div style={{ justifyContent: "center" }}>
@@ -119,8 +139,8 @@ export const DatasetInfoPage = () => {
                     {contentLoading || contentError
                       ? contentFallback
                       : referenceImages.length > 0 && (
-                        <DatasetImageCarousel images={referenceImages} />
-                      )}
+                          <DatasetImageCarousel images={referenceImages} />
+                        )}
                   </>
                 }
                 rightChild={<QuestionsStatsGraphs questions={questions} />}
@@ -135,9 +155,10 @@ export const DatasetInfoPage = () => {
           {
             key: "images",
             label: "Images",
-            children: contentLoading || contentError
-              ? contentFallback
-              : (
+            children:
+              contentLoading || contentError ? (
+                contentFallback
+              ) : (
                 <DatasetImageMasonry
                   images={images}
                   questions={questions}

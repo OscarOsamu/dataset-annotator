@@ -11,6 +11,7 @@ import { useAnnotationSession } from "../Hooks/useAnnotationSession";
 import { getQuestionAnswerRowsFromIndex } from "../Utils/Annotation";
 import { useNotify } from "../Contexts/NotificationProvider";
 import { AnnotationPage } from "../Utils/StyledComponents";
+import AppBreadcrumb from "../AppBreadcrumbs";
 
 const QuestionImagePage = () => {
   const { datasetId: datasetIdParam } = useParams();
@@ -99,6 +100,7 @@ const QuestionImagePage = () => {
 
   return (
     <AnnotationPage>
+      <AppBreadcrumb/>
       <AnnotationHeader
         imageIndex={session.imageIndex}
         imageCount={session.imageCount}
