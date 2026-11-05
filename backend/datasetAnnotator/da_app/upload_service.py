@@ -331,6 +331,7 @@ class DatasetUploadService:
                     )
 
                 Image.objects.bulk_create(image_records)
+                dataset.refresh_annotation_metadata()
 
         except Exception:
             self._cleanup_saved_files(saved_paths)
@@ -412,6 +413,7 @@ class DatasetUploadService:
                     )
 
                 Image.objects.bulk_create(image_records)
+                dataset.refresh_annotation_metadata()
 
         except Exception:
             self._cleanup_saved_files(saved_paths)

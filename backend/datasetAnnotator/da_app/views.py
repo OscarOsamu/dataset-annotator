@@ -1,6 +1,4 @@
 
-from django.db.models import Prefetch
-
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
@@ -156,22 +154,7 @@ class DatasetViewSet(
     serializer_class = DatasetSerializer
 
     def get_queryset(self):
-        queryset = Dataset.objects.all()
-        if self.action == "annotation_data":
-            return queryset
-
-        return queryset.prefetch_related(
-            Prefetch(
-                "images",
-                queryset=Image.objects.filter(is_reference_image=False),
-                to_attr="annotation_images",
-            ),
-            Prefetch(
-                "questions",
-                queryset=Question.objects.order_by("pk"),
-                to_attr="annotation_questions",
-            ),
-        )
+        return Dataset.objects.all()
 
     @extend_schema(
         operation_id="api_datasets_annotation_data_retrieve",

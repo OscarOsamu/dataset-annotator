@@ -1,6 +1,8 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q, F
+from django.db.models.signals import post_delete, post_save, pre_save
+from django.dispatch import receiver
 
 
 ANSWER_TYPE_CHOICES = [
@@ -13,6 +15,8 @@ class Dataset(models.Model):
     name = models.CharField(max_length=100)
     description = models.TextField(blank=True)
     archival_path = models.CharField(max_length=500, null=True, blank=True)
+    question_ids = models.JSONField(default=list, blank=True)
+    image_count = models.PositiveIntegerField(default=0)
     annotation_progress = models.FloatField(default=0.0)
     answer_count = models.PositiveIntegerField(default=0)
 
@@ -37,6 +41,14 @@ class Dataset(models.Model):
             (self.answer_count * 100.0) / total_answer_slots,
             2,
         )
+        return self
+
+    def refresh_annotation_metadata(self):
+        self.question_ids = list(
+            self.questions.order_by("pk").values_list("pk", flat=True)
+        )
+        self.image_count = self.images.filter(is_reference_image=False).count()
+        self.save(update_fields=["question_ids", "image_count"])
         return self
 
     def __str__(self):
@@ -404,3 +416,44 @@ class Answer(models.Model):
 
     def __str__(self):
         return f"Response for {self.question} on {self.image}"
+
+
+def _refresh_dataset_annotation_metadata(dataset_id):
+    dataset = Dataset.objects.filter(pk=dataset_id).first()
+    if dataset is not None:
+        dataset.refresh_annotation_metadata()
+
+
+def _remember_previous_dataset(sender, instance):
+    if instance.pk is None:
+        instance._previous_dataset_id = None
+        return
+
+    instance._previous_dataset_id = sender.objects.filter(pk=instance.pk).values_list(
+        "dataset_id", flat=True
+    ).first()
+
+
+def _refresh_related_dataset_metadata(instance):
+    _refresh_dataset_annotation_metadata(instance.dataset_id)
+    previous_dataset_id = getattr(instance, "_previous_dataset_id", None)
+    if previous_dataset_id is not None and previous_dataset_id != instance.dataset_id:
+        _refresh_dataset_annotation_metadata(previous_dataset_id)
+
+
+@receiver(pre_save, sender=Image)
+@receiver(pre_save, sender=Question)
+def remember_annotation_metadata_dataset(sender, instance, **kwargs):
+    _remember_previous_dataset(sender, instance)
+
+
+@receiver(post_save, sender=Image)
+@receiver(post_save, sender=Question)
+def refresh_annotation_metadata_after_save(sender, instance, **kwargs):
+    _refresh_related_dataset_metadata(instance)
+
+
+@receiver(post_delete, sender=Image)
+@receiver(post_delete, sender=Question)
+def refresh_annotation_metadata_after_delete(sender, instance, **kwargs):
+    _refresh_dataset_annotation_metadata(instance.dataset_id)

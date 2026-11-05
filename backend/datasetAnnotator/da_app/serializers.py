@@ -64,9 +64,6 @@ class DatasetUploadSerializer(serializers.Serializer):
 
 
 class DatasetSerializer(serializers.ModelSerializer):
-    question_ids = serializers.SerializerMethodField()
-    image_count = serializers.SerializerMethodField()
-
     class Meta:
         model = Dataset
         fields = [
@@ -79,19 +76,14 @@ class DatasetSerializer(serializers.ModelSerializer):
             "answer_count",
             "annotation_progress",
         ]
-        read_only_fields = ["id", "archival_path", "answer_count", "annotation_progress"]
-
-    def get_question_ids(self, dataset):
-        questions = getattr(dataset, "annotation_questions", None)
-        if questions is None:
-            questions = dataset.questions.order_by("pk")
-        return [question.pk for question in questions]
-
-    def get_image_count(self, dataset):
-        images = getattr(dataset, "annotation_images", None)
-        if images is not None:
-            return len(images)
-        return dataset.images.filter(is_reference_image=False).count()
+        read_only_fields = [
+            "id",
+            "archival_path",
+            "question_ids",
+            "image_count",
+            "answer_count",
+            "annotation_progress",
+        ]
 
 
 class ImageSerializer(serializers.ModelSerializer):

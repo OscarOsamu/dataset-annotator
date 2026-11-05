@@ -123,6 +123,45 @@ class DatasetAnnotationModelsTest(TestCase):
         self.dataset.refresh_from_db()
         self.assertEqual(self.dataset.annotation_progress, 100.0)
 
+    def test_dataset_annotation_metadata_updates_when_questions_and_images_change(self):
+        first_question = Question.objects.create(
+            dataset=self.dataset,
+            text="What color is this squirrel?",
+            type="QCM",
+            answer_options=["Brown", "Gray"],
+        )
+        second_question = Question.objects.create(
+            dataset=self.dataset,
+            text="How many squirrels are visible?",
+            type="INT",
+        )
+        reference_image = Image.objects.create(
+            dataset=self.dataset,
+            path="/images/reference.jpg",
+            is_reference_image=True,
+        )
+
+        self.dataset.refresh_from_db()
+        self.assertEqual(
+            self.dataset.question_ids,
+            [first_question.pk, second_question.pk],
+        )
+        self.assertEqual(self.dataset.image_count, 1)
+
+        first_question.delete()
+        second_image = Image.objects.create(
+            dataset=self.dataset,
+            path="/images/squirrel-2.jpg",
+        )
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.question_ids, [second_question.pk])
+        self.assertEqual(self.dataset.image_count, 2)
+
+        second_image.delete()
+        reference_image.delete()
+        self.dataset.refresh_from_db()
+        self.assertEqual(self.dataset.image_count, 1)
+
     def test_dataset_tracks_related_answer_count_for_lightweight_progress(self):
         question = Question.objects.create(
             dataset=self.dataset,
