@@ -164,7 +164,10 @@ class AnswerSerializer(ModelValidationSerializer):
             "question",
             "answer_integer",
             "answer_choices",
+            "answer_boolean",
             "is_unclear",
             "created_at",
         ]
         read_only_fields = ["id", "created_at"]
+
+    

@@ -68,6 +68,7 @@ export const QuestionsStatsGraphs = ({
 		type: String(value ?? 'No answer'),
 		value: count,
 	}));
+	const selectedChartType = selectedQuestion.type === 'TF' ? 'Pie chart' : chartType;
 
 	return (
 		<section aria-label="Question statistics">
@@ -84,8 +85,12 @@ export const QuestionsStatsGraphs = ({
 				/>
 				<Segmented
 					aria-label="Select chart type"
-					options={['Pie chart', 'Histogram']}
-					value={chartType}
+					options={
+						selectedQuestion.type === 'TF'
+							? ['Pie chart']
+							: ['Pie chart', 'Histogram']
+					}
+					value={selectedChartType}
 					onChange={(value) => setChartType(value as ChartType)}
 				/>
 			</div>
@@ -99,7 +104,7 @@ export const QuestionsStatsGraphs = ({
 
 			{selectedQuestion.answer_counts.length === 0 ? (
 				<Empty description="No answers yet" />
-			) : chartType === 'Pie chart' ? (
+			) : selectedChartType === 'Pie chart' ? (
 				<PieChart data={chartData} />
 			) : (
 				<Histogram data={selectedQuestion.answer_counts} />

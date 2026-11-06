@@ -1,9 +1,12 @@
 
+from .make_csv_service import CSVGenerationError, CSVGenerationService
+from django.http import FileResponse
 from rest_framework import mixins, serializers, status, viewsets
 from rest_framework.decorators import action, api_view, parser_classes
 from rest_framework.parsers import MultiPartParser
 from rest_framework.response import Response
 
+from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 
 from .models import Answer, Dataset, Image, Question
@@ -139,6 +142,48 @@ def dataset_upload(request):
         status=status.HTTP_201_CREATED,
     )
 
+
+#------------------------------------------------------------------------------------------
+#  GET CSV file for a dataset
+#------------------------------------------------------------------------------------------
+
+class DatasetCSVResponseViewSet(viewsets.ViewSet):
+    @extend_schema(
+        responses={
+            200: OpenApiTypes.BINARY,
+            404: inline_serializer(
+                name="DatasetCSVNotFound",
+                fields={"detail": serializers.CharField()},
+            ),
+            500: inline_serializer(
+                name="DatasetCSVGenerationError",
+                fields={"detail": serializers.CharField()},
+            ),
+        },
+    )
+    def retrieve(self, request, dataset_id=None):
+        try:
+            csv_service = CSVGenerationService(dataset_id)
+        except Dataset.DoesNotExist:
+            return Response(
+                {"detail": "Dataset not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            csv_file_path = csv_service.generate_csv()
+        except CSVGenerationError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        return FileResponse(
+            open(csv_file_path, "rb"),
+            as_attachment=True,
+            filename=f"{csv_service.dataset.name}.csv",
+            content_type="text/csv",
+        )
 
 # ------------------------------------------------------------------------------------------
 #  Others views
@@ -318,6 +363,18 @@ class QuestionViewSet(viewsets.ModelViewSet):
                     )
                     if count is not None:
                         count["count"] += 1
+        elif question.type == "TF":
+            answer_counts = [
+                {"value": True, "count": 0},
+                {"value": False, "count": 0},
+            ]
+            values = responses.filter(is_unclear=False).values_list(
+                "answer_boolean",
+                flat=True,
+            )
+            for value in values:
+                count = next(item for item in answer_counts if item["value"] is value)
+                count["count"] += 1
         else:
             value_counts = {}
             values = responses.filter(is_unclear=False).values_list(

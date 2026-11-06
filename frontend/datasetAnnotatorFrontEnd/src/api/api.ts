@@ -34,6 +34,7 @@ export interface Answer {
     'question': number;
     'answer_integer'?: number | null;
     'answer_choices'?: any | null;
+    'answer_boolean'?: boolean | null;
     'is_unclear'?: boolean;
     'created_at': string;
 }
@@ -43,6 +44,7 @@ export interface AnswerRequest {
     'question': number;
     'answer_integer'?: number | null;
     'answer_choices'?: any | null;
+    'answer_boolean'?: boolean | null;
     'is_unclear'?: boolean;
 }
 export interface Dataset {
@@ -50,15 +52,25 @@ export interface Dataset {
     'name': string;
     'description'?: string;
     'archival_path': string | null;
-    'question_ids': string;
-    'image_count': string;
-    'annotation_progress': string;
+    'question_ids': any;
+    'image_count': number;
+    'answer_count': number;
+    'annotation_progress': number;
 }
 export interface DatasetAnnotationData {
     'tasks': Array<AnnotationTask>;
     'images': Array<Image>;
+    'reference_images': Array<Image>;
     'questions': Array<Question>;
     'answers': Array<Answer>;
+    'total_images': number | null;
+    'next_cursor': number | null;
+}
+export interface DatasetCSVGenerationError {
+    'detail': string;
+}
+export interface DatasetCSVNotFound {
+    'detail': string;
 }
 export interface DatasetRequest {
     'name': string;
@@ -92,6 +104,7 @@ export interface PatchedAnswerRequest {
     'question'?: number;
     'answer_integer'?: number | null;
     'answer_choices'?: any | null;
+    'answer_boolean'?: boolean | null;
     'is_unclear'?: boolean;
 }
 export interface PatchedDatasetRequest {
@@ -155,12 +168,13 @@ export interface SkippedFile {
     'reason': string;
 }
 /**
- * * `QCM` - Multiple-choice input * `INT` - Integer input
+ * * `QCM` - Multiple-choice input * `INT` - Integer input * `TF` - True/False input
  */
 
 export const TypeEnum = {
     Qcm: 'QCM',
     Int: 'INT',
+    Tf: 'TF',
 } as const;
 
 export type TypeEnum = typeof TypeEnum[keyof typeof TypeEnum];
@@ -375,12 +389,15 @@ export const ApiApiAxiosParamCreator = function (configuration?: Configuration) 
             };
         },
         /**
-         * Return pending image/question pairs and the context needed to answer them.
+         * Return one bounded page of pending image/question pairs.
          * @param {number} id A unique integer value identifying this dataset.
+         * @param {number} [cursor] Return images after this image ID.
+         * @param {boolean} [includeReferenceImages] Include up to one page of reference images.
+         * @param {number} [limit] Images per page, capped at 200.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiDatasetsAnnotationDataRetrieve: async (id: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+        apiDatasetsAnnotationDataRetrieve: async (id: number, cursor?: number, includeReferenceImages?: boolean, limit?: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
             // verify required parameter 'id' is not null or undefined
             assertParamExists('apiDatasetsAnnotationDataRetrieve', 'id', id)
             const localVarPath = `/api/datasets/{id}/annotation-data/`
@@ -395,6 +412,18 @@ export const ApiApiAxiosParamCreator = function (configuration?: Configuration) 
             const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
+
+            if (cursor !== undefined) {
+                localVarQueryParameter['cursor'] = cursor;
+            }
+
+            if (includeReferenceImages !== undefined) {
+                localVarQueryParameter['include_reference_images'] = includeReferenceImages;
+            }
+
+            if (limit !== undefined) {
+                localVarQueryParameter['limit'] = limit;
+            }
 
             localVarHeaderParameter['Accept'] = 'application/json';
 
@@ -429,6 +458,39 @@ export const ApiApiAxiosParamCreator = function (configuration?: Configuration) 
             const localVarHeaderParameter = {} as any;
             const localVarQueryParameter = {} as any;
 
+
+            setSearchParams(localVarUrlObj, localVarQueryParameter);
+            let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
+            localVarRequestOptions.headers = {...localVarHeaderParameter, ...headersFromBaseOptions, ...options.headers};
+
+            return {
+                url: toPathString(localVarUrlObj),
+                options: localVarRequestOptions,
+            };
+        },
+        /**
+         * 
+         * @param {number} datasetId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiDatasetsGenerateCsvRetrieve: async (datasetId: number, options: RawAxiosRequestConfig = {}): Promise<RequestArgs> => {
+            // verify required parameter 'datasetId' is not null or undefined
+            assertParamExists('apiDatasetsGenerateCsvRetrieve', 'datasetId', datasetId)
+            const localVarPath = `/api/datasets/{dataset_id}/generate_csv/`
+                .replace('{dataset_id}', encodeURIComponent(String(datasetId)));
+            // use dummy base URL string because the URL constructor only accepts absolute URLs.
+            const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL);
+            let baseOptions;
+            if (configuration) {
+                baseOptions = configuration.baseOptions;
+            }
+
+            const localVarRequestOptions = { method: 'GET', ...baseOptions, ...options};
+            const localVarHeaderParameter = {} as any;
+            const localVarQueryParameter = {} as any;
+
+            localVarHeaderParameter['Accept'] = 'application/json';
 
             setSearchParams(localVarUrlObj, localVarQueryParameter);
             let headersFromBaseOptions = baseOptions && baseOptions.headers ? baseOptions.headers : {};
@@ -1224,13 +1286,16 @@ export const ApiApiFp = function(configuration?: Configuration) {
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
-         * Return pending image/question pairs and the context needed to answer them.
+         * Return one bounded page of pending image/question pairs.
          * @param {number} id A unique integer value identifying this dataset.
+         * @param {number} [cursor] Return images after this image ID.
+         * @param {boolean} [includeReferenceImages] Include up to one page of reference images.
+         * @param {number} [limit] Images per page, capped at 200.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        async apiDatasetsAnnotationDataRetrieve(id: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DatasetAnnotationData>> {
-            const localVarAxiosArgs = await localVarAxiosParamCreator.apiDatasetsAnnotationDataRetrieve(id, options);
+        async apiDatasetsAnnotationDataRetrieve(id: number, cursor?: number, includeReferenceImages?: boolean, limit?: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<DatasetAnnotationData>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiDatasetsAnnotationDataRetrieve(id, cursor, includeReferenceImages, limit, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ApiApi.apiDatasetsAnnotationDataRetrieve']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
@@ -1245,6 +1310,18 @@ export const ApiApiFp = function(configuration?: Configuration) {
             const localVarAxiosArgs = await localVarAxiosParamCreator.apiDatasetsDestroy(id, options);
             const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
             const localVarOperationServerBasePath = operationServerMap['ApiApi.apiDatasetsDestroy']?.[localVarOperationServerIndex]?.url;
+            return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
+        },
+        /**
+         * 
+         * @param {number} datasetId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        async apiDatasetsGenerateCsvRetrieve(datasetId: number, options?: RawAxiosRequestConfig): Promise<(axios?: AxiosInstance, basePath?: string) => AxiosPromise<File>> {
+            const localVarAxiosArgs = await localVarAxiosParamCreator.apiDatasetsGenerateCsvRetrieve(datasetId, options);
+            const localVarOperationServerIndex = configuration?.serverIndex ?? 0;
+            const localVarOperationServerBasePath = operationServerMap['ApiApi.apiDatasetsGenerateCsvRetrieve']?.[localVarOperationServerIndex]?.url;
             return (axios, basePath) => createRequestFunction(localVarAxiosArgs, globalAxios, BASE_PATH, configuration)(axios, localVarOperationServerBasePath || basePath);
         },
         /**
@@ -1550,13 +1627,16 @@ export const ApiApiFactory = function (configuration?: Configuration, basePath?:
             return localVarFp.apiAnswersUpdate(id, answerRequest, options).then((request) => request(axios, basePath));
         },
         /**
-         * Return pending image/question pairs and the context needed to answer them.
+         * Return one bounded page of pending image/question pairs.
          * @param {number} id A unique integer value identifying this dataset.
+         * @param {number} [cursor] Return images after this image ID.
+         * @param {boolean} [includeReferenceImages] Include up to one page of reference images.
+         * @param {number} [limit] Images per page, capped at 200.
          * @param {*} [options] Override http request option.
          * @throws {RequiredError}
          */
-        apiDatasetsAnnotationDataRetrieve(id: number, options?: RawAxiosRequestConfig): AxiosPromise<DatasetAnnotationData> {
-            return localVarFp.apiDatasetsAnnotationDataRetrieve(id, options).then((request) => request(axios, basePath));
+        apiDatasetsAnnotationDataRetrieve(id: number, cursor?: number, includeReferenceImages?: boolean, limit?: number, options?: RawAxiosRequestConfig): AxiosPromise<DatasetAnnotationData> {
+            return localVarFp.apiDatasetsAnnotationDataRetrieve(id, cursor, includeReferenceImages, limit, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1566,6 +1646,15 @@ export const ApiApiFactory = function (configuration?: Configuration, basePath?:
          */
         apiDatasetsDestroy(id: number, options?: RawAxiosRequestConfig): AxiosPromise<void> {
             return localVarFp.apiDatasetsDestroy(id, options).then((request) => request(axios, basePath));
+        },
+        /**
+         * 
+         * @param {number} datasetId 
+         * @param {*} [options] Override http request option.
+         * @throws {RequiredError}
+         */
+        apiDatasetsGenerateCsvRetrieve(datasetId: number, options?: RawAxiosRequestConfig): AxiosPromise<File> {
+            return localVarFp.apiDatasetsGenerateCsvRetrieve(datasetId, options).then((request) => request(axios, basePath));
         },
         /**
          * 
@@ -1817,13 +1906,16 @@ export class ApiApi extends BaseAPI {
     }
 
     /**
-     * Return pending image/question pairs and the context needed to answer them.
+     * Return one bounded page of pending image/question pairs.
      * @param {number} id A unique integer value identifying this dataset.
+     * @param {number} [cursor] Return images after this image ID.
+     * @param {boolean} [includeReferenceImages] Include up to one page of reference images.
+     * @param {number} [limit] Images per page, capped at 200.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    public apiDatasetsAnnotationDataRetrieve(id: number, options?: RawAxiosRequestConfig) {
-        return ApiApiFp(this.configuration).apiDatasetsAnnotationDataRetrieve(id, options).then((request) => request(this.axios, this.basePath));
+    public apiDatasetsAnnotationDataRetrieve(id: number, cursor?: number, includeReferenceImages?: boolean, limit?: number, options?: RawAxiosRequestConfig) {
+        return ApiApiFp(this.configuration).apiDatasetsAnnotationDataRetrieve(id, cursor, includeReferenceImages, limit, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**
@@ -1834,6 +1926,16 @@ export class ApiApi extends BaseAPI {
      */
     public apiDatasetsDestroy(id: number, options?: RawAxiosRequestConfig) {
         return ApiApiFp(this.configuration).apiDatasetsDestroy(id, options).then((request) => request(this.axios, this.basePath));
+    }
+
+    /**
+     * 
+     * @param {number} datasetId 
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    public apiDatasetsGenerateCsvRetrieve(datasetId: number, options?: RawAxiosRequestConfig) {
+        return ApiApiFp(this.configuration).apiDatasetsGenerateCsvRetrieve(datasetId, options).then((request) => request(this.axios, this.basePath));
     }
 
     /**

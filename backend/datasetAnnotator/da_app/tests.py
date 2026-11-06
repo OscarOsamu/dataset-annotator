@@ -2,6 +2,8 @@ from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework.test import APIClient
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from .models import Dataset, Image, Question, Answer
 
@@ -87,6 +89,39 @@ class DatasetAnnotationModelsTest(TestCase):
         self.assertTrue(response.is_unclear)
         self.assertIsNone(response.answer_integer)
         self.assertIsNone(response.answer_choices)
+        self.assertIsNone(response.answer_boolean)
+
+    def test_true_false_question_stores_false_as_a_boolean_answer(self):
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="Is the animal a squirrel?",
+            type="TF",
+        )
+        response = Answer.objects.create(
+            dataset=self.dataset,
+            image=self.image,
+            question=question,
+            answer_boolean=False,
+        )
+
+        self.assertIs(response.answer_boolean, False)
+        self.assertIsNone(response.answer_integer)
+        self.assertIsNone(response.answer_choices)
+
+    def test_true_false_question_requires_a_boolean_answer(self):
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="Is the animal a squirrel?",
+            type="TF",
+        )
+        response = Answer(
+            dataset=self.dataset,
+            image=self.image,
+            question=question,
+        )
+
+        with self.assertRaises(ValidationError):
+            response.full_clean()
 
     def test_dataset_annotation_progress_updates_on_answer_save(self):
         question = Question.objects.create(
@@ -253,6 +288,48 @@ class ModelApiTests(TestCase):
         self.assertEqual(self.dataset.name, "Renamed dataset")
         self.assertEqual(self.dataset.archival_path, "archives/squirrels.zip")
 
+    def test_dataset_csv_endpoint_downloads_generated_csv(self):
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="How many squirrels are visible?",
+            type="INT",
+        )
+        Answer.objects.create(
+            dataset=self.dataset,
+            image=Image.objects.create(
+                dataset=self.dataset,
+                path="images/squirrel-1.jpg",
+            ),
+            question=question,
+            answer_integer=2,
+        )
+
+        with TemporaryDirectory() as media_root, patch(
+            "da_app.make_csv_service.MEDIA_ROOT",
+            media_root,
+        ):
+            response = self.client.get(
+                reverse("dataset-generate-csv", args=[self.dataset.pk])
+            )
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], "text/csv")
+            self.assertIn(
+                'attachment; filename="Squirrels.csv"',
+                response["Content-Disposition"],
+            )
+            self.assertEqual(
+                b"".join(response.streaming_content).decode("utf-8").splitlines(),
+                ["id,image_path,How many squirrels are visible?", "0,images/squirrel-1.jpg,2"],
+            )
+
+    def test_dataset_csv_endpoint_returns_not_found_for_unknown_dataset(self):
+        response = self.client.get(
+            reverse("dataset-generate-csv", args=[99999])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
     def test_question_api_rejects_invalid_multiple_choice_options(self):
         response = self.client.post(
             reverse("question-list"),
@@ -267,3 +344,38 @@ class ModelApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertIn("answer_options", response.data)
+
+    def test_true_false_answer_api_and_question_stats(self):
+        question = Question.objects.create(
+            dataset=self.dataset,
+            text="Is the animal a squirrel?",
+            type="TF",
+        )
+        image = Image.objects.create(
+            dataset=self.dataset,
+            path="images/squirrel-1.jpg",
+        )
+
+        answer_response = self.client.post(
+            reverse("answer-list"),
+            {
+                "dataset": self.dataset.pk,
+                "image": image.pk,
+                "question": question.pk,
+                "answer_boolean": False,
+            },
+            format="json",
+        )
+
+        self.assertEqual(answer_response.status_code, 201)
+        self.assertIs(answer_response.data["answer_boolean"], False)
+
+        stats_response = self.client.get(reverse("question-info", args=[question.pk]))
+        self.assertEqual(stats_response.status_code, 200)
+        self.assertEqual(
+            stats_response.data["answer_counts"],
+            [
+                {"value": True, "count": 0},
+                {"value": False, "count": 1},
+            ],
+        )

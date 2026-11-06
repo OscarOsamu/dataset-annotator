@@ -10,6 +10,7 @@ Name | Type | Description | Notes
 **question** | **number** |  | [optional] [default to undefined]
 **answer_integer** | **number** |  | [optional] [default to undefined]
 **answer_choices** | **any** |  | [optional] [default to undefined]
+**answer_boolean** | **boolean** |  | [optional] [default to undefined]
 **is_unclear** | **boolean** |  | [optional] [default to undefined]
 
 ## Example
@@ -23,6 +24,7 @@ const instance: PatchedAnswerRequest = {
     question,
     answer_integer,
     answer_choices,
+    answer_boolean,
     is_unclear,
 };
 ```

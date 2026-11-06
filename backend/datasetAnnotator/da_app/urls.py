@@ -3,6 +3,7 @@ from rest_framework.routers import DefaultRouter
 
 from .views import (
     AnswerViewSet,
+    DatasetCSVResponseViewSet,
     DatasetViewSet,
     ImageViewSet,
     QuestionViewSet,
@@ -15,7 +16,14 @@ router.register("images", ImageViewSet, basename="image")
 router.register("questions", QuestionViewSet, basename="question")
 router.register("answers", AnswerViewSet, basename="answer")
 
+# add GET endpoint for getting the CSV file for a dataset
+
 urlpatterns = [
     path("datasets/upload/", dataset_upload, name="dataset-upload"),
+    path(
+        "datasets/<int:dataset_id>/generate_csv/",
+        DatasetCSVResponseViewSet.as_view({"get": "retrieve"}),
+        name="dataset-generate-csv",
+    ),
     path("", include(router.urls)),
 ]

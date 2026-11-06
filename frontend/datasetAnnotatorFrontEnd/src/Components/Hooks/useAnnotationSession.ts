@@ -25,6 +25,7 @@ export type AnnotationPhase = "question" | "recap" | "complete";
 export interface AnswerDraft {
   integerValue: number | null;
   selectedChoices: unknown[];
+  booleanValue: boolean | null;
   isUnclear: boolean;
 }
 
@@ -167,6 +168,10 @@ export const useAnnotationSession = (datasetId: number) => {
         draft.isUnclear || activeQuestion.type !== "QCM"
           ? null
           : draft.selectedChoices,
+      answer_boolean:
+        draft.isUnclear || activeQuestion.type !== "TF"
+          ? null
+          : draft.booleanValue,
       is_unclear: draft.isUnclear,
     };
 

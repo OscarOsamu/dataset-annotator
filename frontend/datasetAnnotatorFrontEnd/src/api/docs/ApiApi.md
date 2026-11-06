@@ -12,6 +12,7 @@ All URIs are relative to *http://localhost*
 |[**apiAnswersUpdate**](#apianswersupdate) | **PUT** /api/answers/{id}/ | |
 |[**apiDatasetsAnnotationDataRetrieve**](#apidatasetsannotationdataretrieve) | **GET** /api/datasets/{id}/annotation-data/ | |
 |[**apiDatasetsDestroy**](#apidatasetsdestroy) | **DELETE** /api/datasets/{id}/ | |
+|[**apiDatasetsGenerateCsvRetrieve**](#apidatasetsgeneratecsvretrieve) | **GET** /api/datasets/{dataset_id}/generate_csv/ | |
 |[**apiDatasetsList**](#apidatasetslist) | **GET** /api/datasets/ | |
 |[**apiDatasetsPartialUpdate**](#apidatasetspartialupdate) | **PATCH** /api/datasets/{id}/ | |
 |[**apiDatasetsRetrieve**](#apidatasetsretrieve) | **GET** /api/datasets/{id}/ | |
@@ -337,7 +338,7 @@ No authorization required
 # **apiDatasetsAnnotationDataRetrieve**
 > DatasetAnnotationData apiDatasetsAnnotationDataRetrieve()
 
-Return pending image/question pairs and the context needed to answer them.
+Return one bounded page of pending image/question pairs.
 
 ### Example
 
@@ -351,9 +352,15 @@ const configuration = new Configuration();
 const apiInstance = new ApiApi(configuration);
 
 let id: number; //A unique integer value identifying this dataset. (default to undefined)
+let cursor: number; //Return images after this image ID. (optional) (default to undefined)
+let includeReferenceImages: boolean; //Include up to one page of reference images. (optional) (default to undefined)
+let limit: number; //Images per page, capped at 200. (optional) (default to undefined)
 
 const { status, data } = await apiInstance.apiDatasetsAnnotationDataRetrieve(
-    id
+    id,
+    cursor,
+    includeReferenceImages,
+    limit
 );
 ```
 
@@ -362,6 +369,9 @@ const { status, data } = await apiInstance.apiDatasetsAnnotationDataRetrieve(
 |Name | Type | Description  | Notes|
 |------------- | ------------- | ------------- | -------------|
 | **id** | [**number**] | A unique integer value identifying this dataset. | defaults to undefined|
+| **cursor** | [**number**] | Return images after this image ID. | (optional) defaults to undefined|
+| **includeReferenceImages** | [**boolean**] | Include up to one page of reference images. | (optional) defaults to undefined|
+| **limit** | [**number**] | Images per page, capped at 200. | (optional) defaults to undefined|
 
 
 ### Return type
@@ -432,6 +442,58 @@ No authorization required
 | Status code | Description | Response headers |
 |-------------|-------------|------------------|
 |**204** | No response body |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **apiDatasetsGenerateCsvRetrieve**
+> File apiDatasetsGenerateCsvRetrieve()
+
+
+### Example
+
+```typescript
+import {
+    ApiApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new ApiApi(configuration);
+
+let datasetId: number; // (default to undefined)
+
+const { status, data } = await apiInstance.apiDatasetsGenerateCsvRetrieve(
+    datasetId
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **datasetId** | [**number**] |  | defaults to undefined|
+
+
+### Return type
+
+**File**
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: application/json
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** |  |  -  |
+|**404** |  |  -  |
+|**500** |  |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

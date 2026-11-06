@@ -47,7 +47,9 @@ export const DatasetQuestionsPanel = ({
                 description={
                   question.type === "INT"
                     ? "Integer answer"
-                    : `Multiple choice: ${(question.answer_options ?? []).join(", ")}`
+                    : question.type === "TF"
+                      ? "True or false answer"
+                      : `Multiple choice: ${(question.answer_options ?? []).join(", ")}`
                 }
               />
             </List.Item>

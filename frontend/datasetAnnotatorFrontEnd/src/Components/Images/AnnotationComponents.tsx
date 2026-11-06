@@ -167,14 +167,19 @@ export const AnnotationQuestionForm = ({
   const [selectedChoices, setSelectedChoices] = useState<unknown[]>(
     Array.isArray(answer?.answer_choices) ? answer.answer_choices : [],
   );
+  const [booleanValue, setBooleanValue] = useState<boolean | null>(
+    answer?.answer_boolean ?? null,
+  );
   const [isUnclear, setIsUnclear] = useState(answer?.is_unclear ?? false);
 
   const canSave = isUnclear || (
     question.type === "INT"
       ? integerValue !== null
-      : question.allow_several_answers
-        ? selectedChoices.length > 0
-        : selectedChoices.length === 1
+      : question.type === "TF"
+        ? booleanValue !== null
+        : question.allow_several_answers
+          ? selectedChoices.length > 0
+          : selectedChoices.length === 1
   );
 
   return (
@@ -198,6 +203,18 @@ export const AnnotationQuestionForm = ({
           }
           style={{ width: "100%", maxWidth: 260 }}
         />
+      ) : question.type === "TF" ? (
+        <AnswerOptions>
+          <Radio.Group
+            value={booleanValue}
+            onChange={(event) => setBooleanValue(event.target.value)}
+            options={[
+              { label: "True", value: true },
+              { label: "False", value: false },
+            ]}
+            style={{ display: "grid", gap: 10 }}
+          />
+        </AnswerOptions>
       ) : question.allow_several_answers ? (
         <AnswerOptions>
           <Checkbox.Group
@@ -241,7 +258,9 @@ export const AnnotationQuestionForm = ({
           type="primary"
           loading={saving}
           disabled={!canSave || saving}
-          onClick={() => onSave({ integerValue, selectedChoices, isUnclear })}
+          onClick={() =>
+            onSave({ integerValue, selectedChoices, booleanValue, isUnclear })
+          }
         >
           Save answer
         </Button>

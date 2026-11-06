@@ -9,9 +9,10 @@ Name | Type | Description | Notes
 **name** | **string** |  | [default to undefined]
 **description** | **string** |  | [optional] [default to undefined]
 **archival_path** | **string** |  | [readonly] [default to undefined]
-**question_ids** | **string** |  | [readonly] [default to undefined]
-**image_count** | **string** |  | [readonly] [default to undefined]
-**annotation_progress** | **string** |  | [readonly] [default to undefined]
+**question_ids** | **any** |  | [readonly] [default to undefined]
+**image_count** | **number** |  | [readonly] [default to undefined]
+**answer_count** | **number** |  | [readonly] [default to undefined]
+**annotation_progress** | **number** |  | [readonly] [default to undefined]
 
 ## Example
 
@@ -25,6 +26,7 @@ const instance: Dataset = {
     archival_path,
     question_ids,
     image_count,
+    answer_count,
     annotation_progress,
 };
 ```

@@ -7,8 +7,11 @@ Name | Type | Description | Notes
 ------------ | ------------- | ------------- | -------------
 **tasks** | [**Array&lt;AnnotationTask&gt;**](AnnotationTask.md) |  | [default to undefined]
 **images** | [**Array&lt;Image&gt;**](Image.md) |  | [default to undefined]
+**reference_images** | [**Array&lt;Image&gt;**](Image.md) |  | [default to undefined]
 **questions** | [**Array&lt;Question&gt;**](Question.md) |  | [default to undefined]
 **answers** | [**Array&lt;Answer&gt;**](Answer.md) |  | [default to undefined]
+**total_images** | **number** |  | [default to undefined]
+**next_cursor** | **number** |  | [default to undefined]
 
 ## Example
 
@@ -18,8 +21,11 @@ import { DatasetAnnotationData } from './api';
 const instance: DatasetAnnotationData = {
     tasks,
     images,
+    reference_images,
     questions,
     answers,
+    total_images,
+    next_cursor,
 };
 ```
 

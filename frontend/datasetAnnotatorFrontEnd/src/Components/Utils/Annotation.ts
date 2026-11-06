@@ -48,6 +48,9 @@ export const formatAnswer = (answer: Answer | undefined) => {
   if (answer.answer_integer !== undefined && answer.answer_integer !== null) {
     return String(answer.answer_integer);
   }
+  if (answer.answer_boolean !== undefined && answer.answer_boolean !== null) {
+    return answer.answer_boolean ? "True" : "False";
+  }
   if (Array.isArray(answer.answer_choices)) {
     return answer.answer_choices.map(String).join(", ");
   }

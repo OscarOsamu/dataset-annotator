@@ -8,6 +8,7 @@ from django.dispatch import receiver
 ANSWER_TYPE_CHOICES = [
     ("QCM", "Multiple-choice input"),
     ("INT", "Integer input"),
+    ("TF", "True/False input"),
 ]
 
 
@@ -121,6 +122,21 @@ class Question(models.Model):
                         )
                     }
                 )
+        elif self.type == "TF":
+            if self.answer_options or self.allow_several_answers:
+                raise ValidationError(
+                    {
+                        "answer_options": (
+                            "True/False questions do not use answer options."
+                        )
+                    }
+                )
+            if self.minimum is not None or self.maximum is not None:
+                raise ValidationError(
+                    {
+                        "minimum": "True/False questions cannot have integer bounds."
+                    }
+                )
 
         # Integer questions can have optional minimum/maximum bounds,
         # but minimum must not exceed maximum.
@@ -193,6 +209,7 @@ class Answer(models.Model):
         null=True,
         blank=True,
     )
+    answer_boolean = models.BooleanField(null=True, blank=True)
     is_unclear = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -204,10 +221,17 @@ class Answer(models.Model):
                     | (
                         Q(answer_integer__isnull=False)
                         & Q(answer_choices__isnull=True)
+                        & Q(answer_boolean__isnull=True)
                     )
                     | (
                         Q(answer_integer__isnull=True)
                         & Q(answer_choices__isnull=False)
+                        & Q(answer_boolean__isnull=True)
+                    )
+                    | (
+                        Q(answer_integer__isnull=True)
+                        & Q(answer_choices__isnull=True)
+                        & Q(answer_boolean__isnull=False)
                     )
                 ),
                 name="response_has_exactly_one_answer_form",
@@ -259,6 +283,7 @@ class Answer(models.Model):
             if (
                 self.answer_integer is not None
                 or self.answer_choices is not None
+                or self.answer_boolean is not None
             ):
                 raise ValidationError(
                     {
@@ -303,6 +328,13 @@ class Answer(models.Model):
                     }
                 )
 
+            if self.answer_boolean is not None:
+                raise ValidationError(
+                    {
+                        "answer_boolean": "Integer questions cannot have a boolean answer."
+                    }
+                )
+
             if (
                 question.minimum is not None
                 and self.answer_integer < question.minimum
@@ -332,6 +364,15 @@ class Answer(models.Model):
         # ---------------------------------------------------------
 
         elif question.type == "QCM":
+            if self.answer_boolean is not None:
+                raise ValidationError(
+                    {
+                        "answer_boolean": (
+                            "Multiple-choice questions cannot have a boolean answer."
+                        )
+                    }
+                )
+
             if self.answer_integer is not None:
                 raise ValidationError(
                     {
@@ -387,6 +428,25 @@ class Answer(models.Model):
                     {
                         "answer_choices": (
                             "One or more answers are not valid options."
+                        )
+                    }
+                )
+
+        elif question.type == "TF":
+            if self.answer_boolean is None:
+                raise ValidationError(
+                    {
+                        "answer_boolean": (
+                            "True/False questions require a boolean answer."
+                        )
+                    }
+                )
+
+            if self.answer_integer is not None or self.answer_choices is not None:
+                raise ValidationError(
+                    {
+                        "answer_boolean": (
+                            "True/False questions cannot have integer or choice answers."
                         )
                     }
                 )

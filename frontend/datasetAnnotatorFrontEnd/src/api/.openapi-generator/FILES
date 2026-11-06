@@ -10,6 +10,8 @@ docs/AnswerRequest.md
 docs/ApiApi.md
 docs/Dataset.md
 docs/DatasetAnnotationData.md
+docs/DatasetCSVGenerationError.md
+docs/DatasetCSVNotFound.md
 docs/DatasetRequest.md
 docs/DatasetUploadErrorResponse.md
 docs/DatasetUploadResponse.md

@@ -115,6 +115,7 @@ export const QuestionCreateModal = ({
             options={[
               { label: "Multiple choice", value: TypeEnum.Qcm },
               { label: "Integer", value: TypeEnum.Int },
+              { label: "True or false", value: TypeEnum.Tf },
             ]}
           />
         </Form.Item>
@@ -138,7 +139,7 @@ export const QuestionCreateModal = ({
               <Checkbox>Allow multiple answers</Checkbox>
             </Form.Item>
           </>
-        ) : (
+        ) : questionType === TypeEnum.Int ? (
           <Space size="middle" style={{ display: "flex" }}>
             <Form.Item label="Minimum" name="minimum">
               <InputNumber min={0} precision={0} style={{ width: "100%" }} />
@@ -161,7 +162,7 @@ export const QuestionCreateModal = ({
               <InputNumber min={0} precision={0} style={{ width: "100%" }} />
             </Form.Item>
           </Space>
-        )}
+        ) : null}
         <Form.Item name="skipNextQuestionsIfNull" valuePropName="checked">
           <Checkbox>Skip later questions if this answer is unclear</Checkbox>
         </Form.Item>

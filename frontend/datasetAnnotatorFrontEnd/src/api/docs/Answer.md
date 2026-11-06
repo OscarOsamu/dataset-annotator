@@ -11,6 +11,7 @@ Name | Type | Description | Notes
 **question** | **number** |  | [default to undefined]
 **answer_integer** | **number** |  | [optional] [default to undefined]
 **answer_choices** | **any** |  | [optional] [default to undefined]
+**answer_boolean** | **boolean** |  | [optional] [default to undefined]
 **is_unclear** | **boolean** |  | [optional] [default to undefined]
 **created_at** | **string** |  | [readonly] [default to undefined]
 
@@ -26,6 +27,7 @@ const instance: Answer = {
     question,
     answer_integer,
     answer_choices,
+    answer_boolean,
     is_unclear,
     created_at,
 };
