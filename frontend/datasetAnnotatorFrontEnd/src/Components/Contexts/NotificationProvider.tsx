@@ -7,8 +7,7 @@ type NotificationType = {
 };
 
 const NotificationContext = createContext<NotificationType>({
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  notify: (title: string, msg: string, type: "success" | "error") => {},
+  notify: () => {},
 });
 
 export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ children }) => {

@@ -52,14 +52,14 @@ export const loadAnnotationPage = (
   const pendingLoad = pendingAnnotationLoads.get(key);
   if (pendingLoad) return pendingLoad;
 
-  const params = {
-    limit: ANNOTATION_PAGE_SIZE,
-    ...(includeReferenceImages ? { include_reference_images: true } : {}),
-    ...(cursor === null ? {} : { cursor }),
-  };
   const cacheVersion = datasetCacheVersions.get(datasetId) ?? 0;
   const request = new ApiApi(apiConfig)
-    .apiDatasetsAnnotationDataRetrieve(datasetId, { params })
+    .apiDatasetsAnnotationDataRetrieve(
+      datasetId,
+      cursor ?? undefined,
+      includeReferenceImages ? true : undefined,
+      ANNOTATION_PAGE_SIZE,
+    )
     .then(({ data }) => data as AnnotationDatasetData);
 
   const cachedRequest = request.then((page) => {
