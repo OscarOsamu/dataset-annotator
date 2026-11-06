@@ -17,7 +17,10 @@ class CSVGenerationService:
         self.dataset = Dataset.objects.get(pk=dataset_id)
         self.questions = Question.objects.filter(dataset=self.dataset).order_by("pk")
         self.answers = Answer.objects.filter(dataset=self.dataset)
-        self.images = Image.objects.filter(dataset=self.dataset).order_by("pk")
+        self.images = Image.objects.filter(
+            dataset=self.dataset,
+            is_reference_image=False,
+        ).order_by("pk")
         self.column_names = ["id", "image_path"] + [question.text for question in self.questions]
         self.csv_file_path = f"{MEDIA_ROOT}/csv/{self.dataset.name}.csv"
 
