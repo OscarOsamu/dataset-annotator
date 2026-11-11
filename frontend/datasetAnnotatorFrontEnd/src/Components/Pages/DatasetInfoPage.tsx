@@ -1,33 +1,31 @@
 import { useEffect } from "react";
-import { Empty, Progress, Spin, Tabs } from "antd";
-import { useParams } from "react-router-dom";
+import { Button, Empty, Popconfirm, Space, Spin, Tabs } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
+import { useNavigate, useParams } from "react-router-dom";
+import { ApiApi } from "../../api";
+import { apiConfig } from "../../configuration";
 import { useDatasetInfos } from "../Hooks/useDatasetInfos";
 import { useNotify } from "../Contexts/NotificationProvider";
 import { QuestionsStatsGraphs } from "../Graphs/QuestionsStatsGraphs";
-import {
-  DatasetImageCarousel,
-  DatasetImageMasonry,
-} from "../Images/DatasetImageViews";
+import { DatasetImageMasonry } from "../Images/DatasetImageViews";
 import { ResumeAnnotationButton } from "../Buttons/ResumeAnnotationButton";
-import {
-  LeftColumn,
-  RightColumn,
-  TwoColumnLayout,
-} from "../Utils/Styles/StyledComponents";
-import TwoColumnPageTemplate from "./Templates/TwoColumnPageTemplate";
 import { DatasetEditTab } from "../Tabs/DatasetEditTab";
 import { useDatasetContent } from "../Hooks/useDatasetContent";
 import AppBreadcrumb from "../AppBreadcrumbs";
 import { DatasetDownloadTab } from "../Tabs/DatasetDownloadTab";
+import { getApiErrorMessage } from "../Utils/ApiErrors.ts";
+import { DatasetInformationTab } from "../Tabs/DatasetInformationTab.tsx";
 
 export const DatasetInfoPage = () => {
   const { id } = useParams();
+  
   const {
     datasetInfos,
     loading,
     error: datasetError,
     reload: reloadDataset,
   } = useDatasetInfos(Number(id));
+
   const {
     images,
     referenceImages,
@@ -42,7 +40,9 @@ export const DatasetInfoPage = () => {
     error: contentError,
     reload: reloadContent,
   } = useDatasetContent(datasetInfos?.id);
+
   const notify = useNotify();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (datasetError) {
@@ -68,6 +68,24 @@ export const DatasetInfoPage = () => {
   if (!datasetInfos)
     return <Empty description="This dataset could not be found" />;
 
+  const deleteDataset = async () => {
+    try {
+      await new ApiApi(apiConfig).apiDatasetsDestroy(datasetInfos.id);
+      notify.notify(
+        "Dataset deleted",
+        "The dataset and its stored files were removed.",
+        "success",
+      );
+      navigate("/datasets");
+    } catch (error) {
+      notify.notify(
+        "Dataset could not be deleted",
+        getApiErrorMessage(error, "Please try again."),
+        "error",
+      );
+    }
+  };
+
   const handlePageChange = (nextPage: number) => {
     if (nextPage === pageNumber) return;
 
@@ -88,6 +106,7 @@ export const DatasetInfoPage = () => {
   ) : (
     <Empty description="Dataset preview is unavailable" />
   );
+
   const cachedQuestionCount = Array.isArray(datasetInfos.question_ids)
     ? datasetInfos.question_ids.length
     : questions.length;
@@ -105,7 +124,20 @@ export const DatasetInfoPage = () => {
         }}
       >
         <h1>{datasetInfos.name}</h1>
-        <ResumeAnnotationButton datasetId={datasetInfos.id} />
+        <Space wrap>
+          <ResumeAnnotationButton datasetId={datasetInfos.id} />
+          <Popconfirm
+            title={`Delete ${datasetInfos.name}?`}
+            description="This permanently removes the dataset, annotations, images, and original archive."
+            okText="Delete dataset"
+            okButtonProps={{ danger: true }}
+            onConfirm={deleteDataset}
+          >
+            <Button danger icon={<DeleteOutlined />}>
+              Delete dataset
+            </Button>
+          </Popconfirm>
+        </Space>
       </div>
       <Tabs
         items={[
@@ -113,38 +145,14 @@ export const DatasetInfoPage = () => {
             key: "information",
             label: "Information",
             children: (
-              <TwoColumnPageTemplate
-                leftChild={
-                  <>
-                    <TwoColumnLayout>
-                      <LeftColumn>
-                        <p>Description: {datasetInfos.description}</p>
-                        <p>Number of images: {datasetInfos.image_count}</p>
-                        <p>
-                          Number of questions:{" "}
-                          {contentLoading
-                            ? cachedQuestionCount
-                            : questions.length}
-                        </p>
-                      </LeftColumn>
-                      <RightColumn>
-                        <div style={{ justifyContent: "center" }}>
-                          <p>Annotation progress:</p>
-                          <Progress
-                            type="circle"
-                            percent={Number(datasetInfos.annotation_progress)}
-                          />
-                        </div>
-                      </RightColumn>
-                    </TwoColumnLayout>
-                    {contentLoading || contentError
-                      ? contentFallback
-                      : referenceImages.length > 0 && (
-                          <DatasetImageCarousel images={referenceImages} />
-                        )}
-                  </>
-                }
-                rightChild={<QuestionsStatsGraphs questions={questions} />}
+              <DatasetInformationTab
+                datasetInfos={datasetInfos}
+                contentLoading={contentLoading}
+                questions={questions}
+                referenceImages={referenceImages}
+                cachedQuestionCount={cachedQuestionCount}
+                contentError={contentError}
+                contentFallback={contentFallback}
               />
             ),
           },
@@ -188,11 +196,12 @@ export const DatasetInfoPage = () => {
             key: "download",
             label: "Download",
             children: (
-              <DatasetDownloadTab 
-              id={datasetInfos.id}
-              datasetName={datasetInfos.name}
-              />)
-          }
+              <DatasetDownloadTab
+                id={datasetInfos.id}
+                datasetName={datasetInfos.name}
+              />
+            ),
+          },
         ]}
       />
     </>

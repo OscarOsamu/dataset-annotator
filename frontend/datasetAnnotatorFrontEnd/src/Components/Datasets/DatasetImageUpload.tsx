@@ -1,40 +1,49 @@
 import { useState } from "react";
-import { Button, Space, Upload, Typography } from "antd";
+import { Button, Space, Typography, Upload } from "antd";
 import type { UploadFile } from "antd";
 import { ApiApi } from "../../api";
 import { apiConfig } from "../../configuration";
 import { useNotify } from "../Contexts/NotificationProvider";
 import { getApiErrorMessage } from "../Utils/ApiErrors.ts";
 
-interface ReferenceImageUploadProps {
+interface DatasetImageUploadProps {
   datasetId: number;
   onUploaded: () => void;
+  isReferenceImage?: boolean;
 }
 
-export const ReferenceImageUpload = ({
+export const DatasetImageUpload = ({
   datasetId,
   onUploaded,
-}: ReferenceImageUploadProps) => {
+  isReferenceImage = false,
+}: DatasetImageUploadProps) => {
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [uploading, setUploading] = useState(false);
   const notify = useNotify();
   const selectedFile = fileList[0]?.originFileObj;
+  const imageLabel = isReferenceImage ? "reference image" : "image";
 
-  const uploadReferenceImage = async () => {
+  const uploadImage = async () => {
     if (!selectedFile) return;
     setUploading(true);
     try {
       await new ApiApi(apiConfig).apiImagesCreate(
         datasetId,
         selectedFile as File,
-        true,
+        isReferenceImage,
       );
       setFileList([]);
       onUploaded();
-      notify.notify("Reference image added", "It is now available in the dataset carousel.", "success");
+      notify.notify(
+        `${isReferenceImage ? "Reference image" : "Image"} added`,
+        isReferenceImage
+          ? "It is now available in the dataset carousel."
+          : "It is now included in the dataset images.",
+        "success",
+      );
     } catch (error) {
       notify.notify(
-        "Reference image could not be added",
+        `${isReferenceImage ? "Reference image" : "Image"} could not be added`,
         getApiErrorMessage(error, "Choose a valid image and try again."),
         "error",
       );
@@ -45,9 +54,11 @@ export const ReferenceImageUpload = ({
 
   return (
     <Space direction="vertical" size="middle">
-      <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
-        Reference images appear in the dataset carousel and are not included in annotation progress.
-      </Typography.Paragraph>
+      {isReferenceImage && (
+        <Typography.Paragraph type="secondary" style={{ marginBottom: 0 }}>
+          Reference images appear in the dataset carousel and are not included in annotation progress.
+        </Typography.Paragraph>
+      )}
       <Space wrap>
         <Upload
           accept=".avif,.bmp,.gif,.jpeg,.jpg,.png,.tif,.tiff,.webp"
@@ -61,11 +72,11 @@ export const ReferenceImageUpload = ({
         </Upload>
         <Button
           type="primary"
-          onClick={uploadReferenceImage}
+          onClick={uploadImage}
           disabled={!selectedFile}
           loading={uploading}
         >
-          Add reference image
+          Add {imageLabel}
         </Button>
       </Space>
     </Space>

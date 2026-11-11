@@ -351,3 +351,73 @@ class ImageUploadApiTests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertFalse(DatasetImage.objects.filter(dataset=self.dataset).exists())
+
+    def test_image_delete_removes_file_from_storage(self):
+        image_data = io.BytesIO()
+        Image.new("RGB", (2, 2), "green").save(image_data, format="PNG")
+        upload = SimpleUploadedFile(
+            "reference.png",
+            image_data.getvalue(),
+            content_type="image/png",
+        )
+        create_response = self.client.post(
+            reverse("image-list"),
+            {
+                "dataset": self.dataset.pk,
+                "file": upload,
+                "is_reference_image": True,
+            },
+            format="multipart",
+        )
+        image = DatasetImage.objects.get(pk=create_response.data["id"])
+
+        response = self.client.delete(
+            reverse("image-detail", args=[image.pk])
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(DatasetImage.objects.filter(pk=image.pk).exists())
+        self.assertFalse((self.storage_root / image.path).exists())
+        self.assertFalse((self.storage_root / "cats").exists())
+
+
+@override_settings(MEDIA_ROOT="/tmp/dataset-annotator-delete-api-tests")
+class DatasetDeleteApiTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.storage_root = Path(settings.MEDIA_ROOT)
+        self.storage_root.mkdir(parents=True, exist_ok=True)
+        self.dataset = Dataset.objects.create(
+            name="cats",
+            archival_path="cats/archival/cats.zip",
+        )
+        self.image = DatasetImage.objects.create(
+            dataset=self.dataset,
+            path="cats/data/cat.png",
+        )
+        self.image_file = self.storage_root / self.image.path
+        self.archive_file = self.storage_root / self.dataset.archival_path
+        self.image_file.parent.mkdir(parents=True, exist_ok=True)
+        self.archive_file.parent.mkdir(parents=True, exist_ok=True)
+        self.image_file.write_bytes(b"image data")
+        self.archive_file.write_bytes(b"archive data")
+
+    def tearDown(self):
+        for path in self.storage_root.rglob("*"):
+            if path.is_file():
+                path.unlink()
+        for path in sorted(self.storage_root.rglob("*"), reverse=True):
+            if path.is_dir():
+                path.rmdir()
+
+    def test_dataset_delete_removes_database_records_and_stored_files(self):
+        response = self.client.delete(
+            reverse("dataset-detail", args=[self.dataset.pk])
+        )
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Dataset.objects.filter(pk=self.dataset.pk).exists())
+        self.assertFalse(DatasetImage.objects.filter(pk=self.image.pk).exists())
+        self.assertFalse(self.image_file.exists())
+        self.assertFalse(self.archive_file.exists())
+        self.assertFalse((self.storage_root / "cats").exists())

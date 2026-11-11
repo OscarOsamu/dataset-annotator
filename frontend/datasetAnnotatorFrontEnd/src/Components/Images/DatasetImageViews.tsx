@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Carousel, Empty, Pagination } from "antd";
+import { Button, Carousel, Empty, Pagination, Popconfirm } from "antd";
+import { DeleteOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import type { Answer, Image, Question } from "../../api";
 import { formatAnswer, getImageUrl } from "../Annotation/Annotation";
@@ -27,6 +28,8 @@ interface ImageCardProps {
 interface DatasetImageCarouselProps {
   images: Image[];
   emptyDescription?: string;
+  onRemove?: (image: Image) => void;
+  removingImageId?: number;
 }
 
 // STYLED COMPONENTS
@@ -37,6 +40,7 @@ const CarouselViewport = styled.div`
 `;
 
 const CarouselSlide = styled.div`
+  position: relative;
   padding: 8px 36px 30px;
 `;
 
@@ -211,6 +215,8 @@ const ImageCard = ({
 export const DatasetImageCarousel = ({
   images,
   emptyDescription = "No reference images",
+  onRemove,
+  removingImageId,
 }: DatasetImageCarouselProps) => {
   if (images.length === 0) return <Empty description={emptyDescription} />;
 
@@ -224,6 +230,24 @@ export const DatasetImageCarousel = ({
               alt={image.path.split("/").pop() ?? image.path}
               loading="lazy"
             />
+            {onRemove && (
+              <Popconfirm
+                title="Remove reference image?"
+                description="Questions using this image will no longer reference it."
+                okText="Remove"
+                okButtonProps={{ danger: true }}
+                onConfirm={() => onRemove(image)}
+              >
+                <Button
+                  danger
+                  aria-label="Remove reference image"
+                  title="Remove reference image"
+                  icon={<DeleteOutlined />}
+                  loading={removingImageId === image.id}
+                  style={{ position: "absolute", top: 16, right: 44 }}
+                />
+              </Popconfirm>
+            )}
           </CarouselSlide>
         ))}
       </Carousel>

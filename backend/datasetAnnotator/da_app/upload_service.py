@@ -57,6 +57,36 @@ def normalize_dataset_name(name: str) -> str:
     return normalized
 
 
+def delete_stored_file(path: str, storage=default_storage) -> None:
+    storage.delete(path)
+
+    try:
+        storage_root = Path(storage.path("")).resolve()
+        file_path = Path(storage.path(path)).resolve()
+    except (AttributeError, NotImplementedError, OSError):
+        return
+
+    if file_path == storage_root or not file_path.is_relative_to(storage_root):
+        return
+
+    parent = file_path.parent
+    while parent != storage_root:
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+        parent = parent.parent
+
+
+def delete_dataset_files(dataset: Dataset, storage=default_storage) -> None:
+    paths = set(dataset.images.values_list("path", flat=True))
+    if dataset.archival_path:
+        paths.add(dataset.archival_path)
+
+    for path in paths:
+        delete_stored_file(path, storage)
+
+
 def is_image_file(uploaded_file: UploadedFile) -> bool:
     return Path(uploaded_file.name).suffix.lower() in SUPPORTED_IMAGE_EXTENSIONS
 

@@ -24,7 +24,12 @@ from .serializers import (
     QuestionSerializer,
     SkippedFileSerializer,
 )
-from .upload_service import DatasetUploadError, DatasetUploadService
+from .upload_service import (
+    DatasetUploadError,
+    DatasetUploadService,
+    delete_dataset_files,
+    delete_stored_file,
+)
 
 # ------------------------------------------------------------------------------------------
 #  Dataset
@@ -265,6 +270,10 @@ class DatasetViewSet(
     def get_queryset(self):
         return Dataset.objects.all()
 
+    def perform_destroy(self, instance):
+        delete_dataset_files(instance)
+        instance.delete()
+
     @extend_schema(
         operation_id="api_datasets_annotation_data_retrieve",
         parameters=[
@@ -392,6 +401,10 @@ class ImageViewSet(viewsets.ModelViewSet):
             context=self.get_serializer_context(),
         )
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
+
+    def perform_destroy(self, instance):
+        delete_stored_file(instance.path)
+        instance.delete()
 
 
 class QuestionViewSet(viewsets.ModelViewSet):

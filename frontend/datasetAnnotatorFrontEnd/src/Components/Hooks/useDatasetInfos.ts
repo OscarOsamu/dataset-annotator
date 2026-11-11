@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { type Dataset } from '../../api';
-import { getCachedDataset, loadDataset } from './DatasetCache';
+import { getCachedDataset, invalidateDatasets, loadDataset } from './DatasetCache';
 
 export const useDatasetInfos = (id?: number) => {
   const [datasetState, setDatasetState] = useState<{
@@ -39,11 +39,10 @@ export const useDatasetInfos = (id?: number) => {
   }, [id, refreshKey]);
 
   const reload = () => {
-    const cachedDataset = id ? getCachedDataset(id) : undefined;
-    if (id && cachedDataset) {
-      setDatasetState({ id, dataset: cachedDataset });
-      return;
-    }
+    if (!id) return;
+    invalidateDatasets();
+    setDatasetState({ id });
+    setRequestState({ id, loading: true });
     setRefreshKey((current) => current + 1);
   };
 
