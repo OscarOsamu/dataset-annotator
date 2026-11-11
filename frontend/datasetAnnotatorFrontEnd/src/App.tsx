@@ -2,7 +2,7 @@ import {ConfigProvider } from 'antd';
 import './App.css'
 import AppRouter from './Components/Routers/AppRouter';
 import { NotificationProvider } from './Components/Contexts/NotificationProvider';
-import { themeConfig } from './Components/Utils/Colors';
+import { themeConfig } from './Components/Utils/Styles/Colors';
 
 
 

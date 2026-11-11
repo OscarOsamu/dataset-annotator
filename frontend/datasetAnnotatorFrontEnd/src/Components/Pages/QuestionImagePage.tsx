@@ -8,10 +8,10 @@ import {
   AnnotationWorkbench,
 } from "../Images/AnnotationComponents";
 import { useAnnotationSession } from "../Hooks/useAnnotationSession";
-import { getQuestionAnswerRowsFromIndex } from "../Utils/Annotation";
+import { getQuestionAnswerRowsFromIndex } from "../Annotation/Annotation";
 import { useNotify } from "../Contexts/NotificationProvider";
-import { AnnotationPage } from "../Utils/StyledComponents";
 import AppBreadcrumb from "../AppBreadcrumbs";
+import { AnnotationPage } from "../Utils/Styles/StyledComponents";
 
 const QuestionImagePage = () => {
   const { datasetId: datasetIdParam } = useParams();

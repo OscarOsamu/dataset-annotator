@@ -3,7 +3,7 @@ import { Button, Checkbox, Image, InputNumber, Progress, Radio, Typography } fro
 import styled from "styled-components";
 import type { Answer, Question } from "../../api";
 import type { AnswerDraft } from "../Hooks/useAnnotationSession";
-import { formatAnswer, getImageUrl, type QuestionAnswerRow } from "../Utils/Annotation";
+import { formatAnswer, getImageUrl, type QuestionAnswerRow } from "../Annotation/Annotation";
 
 // Styled Components
 

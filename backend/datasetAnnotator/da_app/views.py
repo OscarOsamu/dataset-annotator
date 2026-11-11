@@ -9,6 +9,11 @@ from rest_framework.response import Response
 from drf_spectacular.types import OpenApiTypes
 from drf_spectacular.utils import OpenApiParameter, extend_schema, inline_serializer
 
+from pathlib import PurePosixPath
+
+from django.core.files.storage import default_storage
+
+from .create_archival_with_data import CreateArchivalWithData
 from .models import Answer, Dataset, Image, Question
 from .serializers import (
     AnswerSerializer,
@@ -184,6 +189,65 @@ class DatasetCSVResponseViewSet(viewsets.ViewSet):
             filename=f"{csv_service.dataset.name}.csv",
             content_type="text/csv",
         )
+
+
+@api_view(["GET"])
+def dataset_original_archive(request, dataset_id):
+    try:
+        dataset = Dataset.objects.get(pk=dataset_id)
+    except Dataset.DoesNotExist:
+        return Response(
+            {"detail": "Dataset not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if not dataset.archival_path:
+        return Response(
+            {"detail": "Original archive not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        archive_file = default_storage.open(dataset.archival_path, "rb")
+    except (FileNotFoundError, OSError):
+        return Response(
+            {"detail": "Original archive not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return FileResponse(
+        archive_file,
+        as_attachment=True,
+        filename=PurePosixPath(dataset.archival_path).name,
+        content_type="application/octet-stream",
+    )
+
+
+@api_view(["GET"])
+def dataset_archive_with_results(request, dataset_id):
+    try:
+        dataset = Dataset.objects.get(pk=dataset_id)
+    except Dataset.DoesNotExist:
+        return Response(
+            {"detail": "Dataset not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        archive_path = CreateArchivalWithData(dataset).create_archive()
+        archive_file = open(archive_path, "rb")
+    except Exception as exc:
+        return Response(
+            {"detail": f"Failed to create dataset archive: {exc}"},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return FileResponse(
+        archive_file,
+        as_attachment=True,
+        filename=f"{dataset.name}_archive.zip",
+        content_type="application/zip",
+    )
 
 # ------------------------------------------------------------------------------------------
 #  Others views

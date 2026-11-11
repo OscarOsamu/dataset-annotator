@@ -11,13 +11,13 @@ import {
   indexAnswersByImage,
   updateAnswerIndex,
   type AnswersByImage,
-} from "../Utils/Annotation";
+} from "../Annotation/Annotation.ts";
 import {
   cacheSavedAnswer,
   loadAnnotationPage,
   type AnnotationDatasetData,
   type AnnotationTask,
-} from "../Utils/AnnotationData";
+} from "../Annotation/AnnotationData.ts";
 import { getApiErrorMessage } from "../Utils/ApiErrors.ts";
 
 export type AnnotationPhase = "question" | "recap" | "complete";

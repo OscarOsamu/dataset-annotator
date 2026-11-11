@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button, Empty, List, Space, Typography } from "antd";
 import type { Question } from "../../api";
-import { AppSpacing } from "../Utils/AppStyles.tsx";
+import { AppSpacing } from "../Utils/Styles/AppStyles.tsx";
 import { QuestionCreateModal } from "./QuestionCreateModal";
 
 interface DatasetQuestionsPanelProps {

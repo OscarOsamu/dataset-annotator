@@ -1,3 +1,6 @@
+import io
+import zipfile
+from pathlib import Path
 from django.core.exceptions import ValidationError
 from django.test import TestCase
 from django.urls import reverse
@@ -329,6 +332,85 @@ class ModelApiTests(TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_dataset_original_archive_endpoint_downloads_stored_archive(self):
+        with TemporaryDirectory() as storage_root:
+            archive_path = Path(storage_root) / "archives" / "squirrels.zip"
+            archive_path.parent.mkdir()
+            archive_path.write_bytes(b"original archive")
+
+            with patch(
+                "da_app.views.default_storage.open",
+                side_effect=lambda path, mode: open(Path(storage_root) / path, mode),
+            ):
+                response = self.client.get(
+                    reverse("dataset-original-archive", args=[self.dataset.pk])
+                )
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(
+                response["Content-Disposition"],
+                'attachment; filename="squirrels.zip"',
+            )
+            self.assertEqual(b"".join(response.streaming_content), b"original archive")
+
+    def test_dataset_original_archive_endpoint_returns_not_found_without_archive(self):
+        self.dataset.archival_path = None
+        self.dataset.save(update_fields=["archival_path"])
+
+        response = self.client.get(
+            reverse("dataset-original-archive", args=[self.dataset.pk])
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_dataset_archive_with_results_contains_csv_readme_and_images(self):
+        image_paths = {
+            "Squirrels/data/squirrel.png": b"image data",
+            "Squirrels/data/reference.png": b"reference data",
+        }
+        for path in image_paths:
+            Image.objects.create(
+                dataset=self.dataset,
+                path=path,
+                is_reference_image="reference" in path,
+            )
+
+        with TemporaryDirectory() as media_root:
+            for path, content in image_paths.items():
+                file_path = Path(media_root) / path
+                file_path.parent.mkdir(parents=True, exist_ok=True)
+                file_path.write_bytes(content)
+
+            with (
+                patch("da_app.make_csv_service.MEDIA_ROOT", media_root),
+                patch("da_app.create_archival_with_data.MEDIA_ROOT", media_root),
+                patch(
+                    "da_app.create_archival_with_data.default_storage.open",
+                    side_effect=lambda path, mode: open(Path(media_root) / path, mode),
+                ),
+            ):
+                response = self.client.get(
+                    reverse(
+                        "dataset-archive-with-results",
+                        args=[self.dataset.pk],
+                    )
+                )
+
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response["Content-Type"], "application/zip")
+            with zipfile.ZipFile(io.BytesIO(b"".join(response.streaming_content))) as archive:
+                names = set(archive.namelist())
+                self.assertIn("Squirrels/Squirrels.csv", names)
+                self.assertIn("Squirrels/README.md", names)
+                self.assertEqual(
+                    archive.read("Squirrels/images/squirrel.png"),
+                    b"image data",
+                )
+                self.assertEqual(
+                    archive.read("Squirrels/reference_images/reference.png"),
+                    b"reference data",
+                )
 
     def test_question_api_rejects_invalid_multiple_choice_options(self):
         response = self.client.post(

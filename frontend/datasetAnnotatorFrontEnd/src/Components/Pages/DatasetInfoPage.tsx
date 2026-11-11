@@ -13,11 +13,12 @@ import {
   LeftColumn,
   RightColumn,
   TwoColumnLayout,
-} from "../Utils/StyledComponents";
+} from "../Utils/Styles/StyledComponents";
 import TwoColumnPageTemplate from "./Templates/TwoColumnPageTemplate";
 import { DatasetEditTab } from "../Tabs/DatasetEditTab";
 import { useDatasetContent } from "../Hooks/useDatasetContent";
 import AppBreadcrumb from "../AppBreadcrumbs";
+import { DatasetDownloadTab } from "../Tabs/DatasetDownloadTab";
 
 export const DatasetInfoPage = () => {
   const { id } = useParams();
@@ -183,6 +184,15 @@ export const DatasetInfoPage = () => {
               />
             ),
           },
+          {
+            key: "download",
+            label: "Download",
+            children: (
+              <DatasetDownloadTab 
+              id={datasetInfos.id}
+              datasetName={datasetInfos.name}
+              />)
+          }
         ]}
       />
     </>

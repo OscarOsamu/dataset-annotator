@@ -4,7 +4,7 @@ import { DatasetDetailsForm } from "../Datasets/DatasetDetailsForm.tsx";
 import { DatasetQuestionsPanel } from "../Datasets/DatasetQuestionsPanel.tsx";
 import { ReferenceImageUpload } from "../Datasets/ReferenceImageUpload.tsx";
 import { DatasetImageCarousel } from "../Images/DatasetImageViews.tsx";
-import { AppSpacing } from "../Utils/AppStyles.tsx";
+import { AppSpacing } from "../Utils/Styles/AppStyles.tsx";
 
 interface DatasetEditTabProps {
   dataset: Dataset;

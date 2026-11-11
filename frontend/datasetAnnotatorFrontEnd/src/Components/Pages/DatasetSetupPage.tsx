@@ -8,7 +8,7 @@ import { useNotify } from "../Contexts/NotificationProvider";
 import { DatasetImageCarousel } from "../Images/DatasetImageViews";
 import { DatasetDetailsForm } from "../Datasets/DatasetDetailsForm";
 import { DatasetQuestionsPanel } from "../Datasets/DatasetQuestionsPanel";
-import { DatasetSummary, SetupPage, SetupSection } from "../Utils/DatasetSetupStyles";
+import { DatasetSummary, SetupPage, SetupSection } from "../Utils/Styles/DatasetSetupStyles";
 import AppBreadcrumb from "../AppBreadcrumbs";
 
 export const DatasetSetupPage = () => {
@@ -90,7 +90,7 @@ export const DatasetSetupPage = () => {
         </div>
       </DatasetSummary>
 
-      {descriptionSaved && (
+      
         <>
           <SetupSection>
             <Typography.Title level={2}>Image preview</Typography.Title>
@@ -116,7 +116,10 @@ export const DatasetSetupPage = () => {
             />
           </SetupSection>
         </>
-      )}
+      
+      <Button>
+        <a href={`/dataset/${datasetInfos.id}`}>Finish Dataset Setup</a>
+      </Button>
     </SetupPage>
   );
 };

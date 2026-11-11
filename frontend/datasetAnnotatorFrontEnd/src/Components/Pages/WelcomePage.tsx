@@ -4,7 +4,7 @@ import TwoColumnPageTemplate from "./Templates/TwoColumnPageTemplate";
 import { Button, Typography } from "antd";
 import { useNavigate } from "react-router-dom";
 import { DatasetUploadAction } from "../Datasets/DatasetUploadAction";
-import { AppSpacing } from "../Utils/AppStyles";
+import { AppSpacing } from "../Utils/Styles/AppStyles";
 
 const WelcomePage: React.FC = () => {
   const navigate = useNavigate();

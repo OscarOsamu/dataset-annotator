@@ -7,6 +7,8 @@ from .views import (
     DatasetViewSet,
     ImageViewSet,
     QuestionViewSet,
+    dataset_archive_with_results,
+    dataset_original_archive,
     dataset_upload,
 )
 
@@ -20,6 +22,16 @@ router.register("answers", AnswerViewSet, basename="answer")
 
 urlpatterns = [
     path("datasets/upload/", dataset_upload, name="dataset-upload"),
+    path(
+        "datasets/<int:dataset_id>/get_original_archive/",
+        dataset_original_archive,
+        name="dataset-original-archive",
+    ),
+    path(
+        "datasets/<int:dataset_id>/get_archive_with_results/",
+        dataset_archive_with_results,
+        name="dataset-archive-with-results",
+    ),
     path(
         "datasets/<int:dataset_id>/generate_csv/",
         DatasetCSVResponseViewSet.as_view({"get": "retrieve"}),

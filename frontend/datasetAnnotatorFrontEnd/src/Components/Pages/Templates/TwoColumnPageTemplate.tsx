@@ -6,7 +6,7 @@ import {
   LeftColumn,
   RightColumn,
   VerticalSeparator,
-} from "../../Utils/StyledComponents";
+} from "../../Utils/Styles/StyledComponents";
 
 interface TwoColumnPageTemplateProps {
   title?: string;

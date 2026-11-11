@@ -4,7 +4,7 @@ import {
   ANNOTATION_PAGE_SIZE,
   invalidateAnnotationPages,
   loadAnnotationPage,
-} from "../Utils/AnnotationData";
+} from "../Annotation/AnnotationData";
 
 interface PageNavigation {
   datasetId: number;

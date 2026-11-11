@@ -13,6 +13,8 @@ All URIs are relative to *http://localhost*
 |[**apiDatasetsAnnotationDataRetrieve**](#apidatasetsannotationdataretrieve) | **GET** /api/datasets/{id}/annotation-data/ | |
 |[**apiDatasetsDestroy**](#apidatasetsdestroy) | **DELETE** /api/datasets/{id}/ | |
 |[**apiDatasetsGenerateCsvRetrieve**](#apidatasetsgeneratecsvretrieve) | **GET** /api/datasets/{dataset_id}/generate_csv/ | |
+|[**apiDatasetsGetArchiveWithResultsRetrieve**](#apidatasetsgetarchivewithresultsretrieve) | **GET** /api/datasets/{dataset_id}/get_archive_with_results/ | |
+|[**apiDatasetsGetOriginalArchiveRetrieve**](#apidatasetsgetoriginalarchiveretrieve) | **GET** /api/datasets/{dataset_id}/get_original_archive/ | |
 |[**apiDatasetsList**](#apidatasetslist) | **GET** /api/datasets/ | |
 |[**apiDatasetsPartialUpdate**](#apidatasetspartialupdate) | **PATCH** /api/datasets/{id}/ | |
 |[**apiDatasetsRetrieve**](#apidatasetsretrieve) | **GET** /api/datasets/{id}/ | |
@@ -494,6 +496,106 @@ No authorization required
 |**200** |  |  -  |
 |**404** |  |  -  |
 |**500** |  |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **apiDatasetsGetArchiveWithResultsRetrieve**
+> apiDatasetsGetArchiveWithResultsRetrieve()
+
+
+### Example
+
+```typescript
+import {
+    ApiApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new ApiApi(configuration);
+
+let datasetId: number; // (default to undefined)
+
+const { status, data } = await apiInstance.apiDatasetsGetArchiveWithResultsRetrieve(
+    datasetId
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **datasetId** | [**number**] |  | defaults to undefined|
+
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | No response body |  -  |
+
+[[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
+
+# **apiDatasetsGetOriginalArchiveRetrieve**
+> apiDatasetsGetOriginalArchiveRetrieve()
+
+
+### Example
+
+```typescript
+import {
+    ApiApi,
+    Configuration
+} from './api';
+
+const configuration = new Configuration();
+const apiInstance = new ApiApi(configuration);
+
+let datasetId: number; // (default to undefined)
+
+const { status, data } = await apiInstance.apiDatasetsGetOriginalArchiveRetrieve(
+    datasetId
+);
+```
+
+### Parameters
+
+|Name | Type | Description  | Notes|
+|------------- | ------------- | ------------- | -------------|
+| **datasetId** | [**number**] |  | defaults to undefined|
+
+
+### Return type
+
+void (empty response body)
+
+### Authorization
+
+No authorization required
+
+### HTTP request headers
+
+ - **Content-Type**: Not defined
+ - **Accept**: Not defined
+
+
+### HTTP response details
+| Status code | Description | Response headers |
+|-------------|-------------|------------------|
+|**200** | No response body |  -  |
 
 [[Back to top]](#) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to Model list]](../README.md#documentation-for-models) [[Back to README]](../README.md)
 

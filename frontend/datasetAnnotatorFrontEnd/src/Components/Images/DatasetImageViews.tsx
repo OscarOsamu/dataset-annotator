@@ -2,9 +2,9 @@ import { useState } from "react";
 import { Carousel, Empty, Pagination } from "antd";
 import styled from "styled-components";
 import type { Answer, Image, Question } from "../../api";
-import { formatAnswer, getImageUrl } from "../Utils/Annotation";
-import { AppColors } from "../Utils/Colors";
-import { AppSizing } from "../Utils/AppStyles";
+import { formatAnswer, getImageUrl } from "../Annotation/Annotation";
+import { AppColors } from "../Utils/Styles/Colors";
+import { AppSizing } from "../Utils/Styles/AppStyles";
 
 // INTERFACES
 
