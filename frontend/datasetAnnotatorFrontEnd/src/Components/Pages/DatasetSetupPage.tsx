@@ -49,12 +49,6 @@ export const DatasetSetupPage = () => {
     }
   }, [contentError, notify]);
 
-  const descriptionSaved = Boolean(
-    savedDescription?.datasetId === datasetId
-      ? savedDescription.value.trim()
-      : datasetInfos?.description?.trim(),
-  );
-
   if (loading) return <Spin />;
   if (!datasetInfos) return <Empty description="This dataset could not be found" />;
 
