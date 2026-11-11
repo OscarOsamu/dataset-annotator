@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Button, Empty, Space, Spin, Typography } from "antd";
 import { useParams } from "react-router-dom";
-import { type DatasetRequest } from "../../api";
 import { useDatasetInfos } from "../Hooks/useDatasetInfos";
 import { useDatasetContent } from "../Hooks/useDatasetContent";
 import { useNotify } from "../Contexts/NotificationProvider";
@@ -27,10 +26,6 @@ export const DatasetSetupPage = () => {
     error: contentError,
     reload: reloadContent,
   } = useDatasetContent(datasetInfos?.id);
-  const [savedDescription, setSavedDescription] = useState<{
-    datasetId: number;
-    value: string;
-  }>();
   const notify = useNotify();
 
   useEffect(() => {
@@ -73,11 +68,7 @@ export const DatasetSetupPage = () => {
             dataset={datasetInfos}
             requireDescription
             submitLabel="Save description and continue"
-            onSaved={(values: DatasetRequest) => {
-              setSavedDescription({
-                datasetId: datasetInfos.id,
-                value: values.description ?? "",
-              });
+            onSaved={() => {
               reloadDataset();
             }}
           />
