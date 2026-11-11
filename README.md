@@ -16,7 +16,16 @@ However if you do decide to deploy it on serveur, you are responsible for those 
 
 ## Getting Started
 
-TBD : dockerize it
+### Run with Docker 
+
+It is recommanded to run the app with docker installed on your computer. However, if you don't want to do skip this part and go to the instruction to run the app without it.
+
+```bash
+docker compose build
+docker compose up
+```
+
+The app will be exposed at [localhost:5173](http://localhost:5173/) while you can find the API of the backend at http://127.0.0.1:8000/swagger/
 
 ### Backend
 

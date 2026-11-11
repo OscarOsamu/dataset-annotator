@@ -1,0 +1,44 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DATABASE_PATH: /var/lib/dataset-annotator/db.sqlite3
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/datasetAnnotator:/app
+      - dataset_data:/app/data
+      - dataset_db:/var/lib/dataset-annotator
+
+  frontend:
+    build:
+      context: ./frontend/datasetAnnotatorFrontEnd
+      dockerfile: Dockerfile
+      target: dev
+    command: npm run dev -- --host 0.0.0.0
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend/datasetAnnotatorFrontEnd:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  frontend-static:
+    profiles:
+      - static
+    build:
+      context: ./frontend/datasetAnnotatorFrontEnd
+      dockerfile: Dockerfile
+      target: static
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+
+volumes:
+  dataset_data:
+  dataset_db:
