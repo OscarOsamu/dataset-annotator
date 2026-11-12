@@ -93,7 +93,7 @@ export const cacheSavedAnswer = (
   answer: Answer,
   question: Question,
 ) => {
-  const page = annotationPageCache.get(getPageKey(datasetId, cursor, false));
+  const page = annotationPageCache.get(getPageKey(datasetId, cursor, true));
   if (!page) return;
 
   page.answers = [

@@ -119,6 +119,9 @@ const QuestionImagePage = () => {
           <AnnotationQuestionForm
             key={`${currentImage.id}-${session.activeQuestion.id}`}
             question={session.activeQuestion}
+            referenceImage={session.referenceImages.find(
+              (image) => image.id === session.activeQuestion?.reference_image,
+            )}
             answer={session.existingAnswer}
             saving={session.saving}
             onSave={(draft) => void session.saveAnswer(draft)}

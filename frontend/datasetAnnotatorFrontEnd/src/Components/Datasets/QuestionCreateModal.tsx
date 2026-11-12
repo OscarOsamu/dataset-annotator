@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Checkbox,
   Form,
@@ -8,7 +8,7 @@ import {
   Select,
   Space,
 } from "antd";
-import { ApiApi, TypeEnum, type QuestionRequest } from "../../api";
+import { ApiApi, TypeEnum, type Image, type Question, type QuestionRequest } from "../../api";
 import { apiConfig } from "../../configuration";
 import { useNotify } from "../Contexts/NotificationProvider";
 import {
@@ -19,6 +19,8 @@ import { AnswerOptionsEditor } from "./AnswerOptionsEditor";
 
 interface QuestionCreateModalProps {
   datasetId: number;
+  referenceImages: Image[];
+  question?: Question;
   open: boolean;
   onCancel: () => void;
   onCreated: () => void;
@@ -32,10 +34,13 @@ interface QuestionFormValues {
   skipNextQuestionsIfNull?: boolean;
   minimum?: number | null;
   maximum?: number | null;
+  referenceImage?: number;
 }
 
 export const QuestionCreateModal = ({
   datasetId,
+  referenceImages,
+  question,
   open,
   onCancel,
   onCreated,
@@ -44,6 +49,25 @@ export const QuestionCreateModal = ({
   const [isSaving, setIsSaving] = useState(false);
   const questionType = Form.useWatch("type", form) ?? TypeEnum.Qcm;
   const notify = useNotify();
+
+  useEffect(() => {
+    if (!open) return;
+    if (!question) {
+      form.resetFields();
+      return;
+    }
+
+    form.setFieldsValue({
+      text: question.text,
+      type: question.type,
+      answerOptions: (question.answer_options ?? []).map(String),
+      allowSeveralAnswers: question.allow_several_answers,
+      skipNextQuestionsIfNull: question.skip_next_questions_if_null,
+      minimum: question.minimum,
+      maximum: question.maximum,
+      referenceImage: question.reference_image ?? undefined,
+    });
+  }, [form, open, question]);
 
   const closeModal = () => {
     form.resetFields();
@@ -57,6 +81,7 @@ export const QuestionCreateModal = ({
         dataset: datasetId,
         text: values.text.trim(),
         type: values.type,
+        reference_image: values.referenceImage ?? null,
         answer_options:
           values.type === TypeEnum.Qcm
             ? (values.answerOptions ?? [])
@@ -71,10 +96,21 @@ export const QuestionCreateModal = ({
       };
 
       setIsSaving(true);
-      await new ApiApi(apiConfig).apiQuestionsCreate(request);
+      const api = new ApiApi(apiConfig);
+      if (question) {
+        await api.apiQuestionsPartialUpdate(question.id, request);
+      } else {
+        await api.apiQuestionsCreate(request);
+      }
       closeModal();
       onCreated();
-      notify.notify("Question added", "The question is ready for annotation.", "success");
+      notify.notify(
+        question ? "Question updated" : "Question added",
+        question
+          ? "Your changes have been saved."
+          : "The question is ready for annotation.",
+        "success",
+      );
     } catch (error) {
       if (isFormValidationError(error)) return;
       notify.notify(
@@ -89,11 +125,11 @@ export const QuestionCreateModal = ({
 
   return (
     <Modal
-      title="Add a question"
+      title={question ? "Edit question" : "Add a question"}
       open={open}
       onCancel={closeModal}
       onOk={createQuestion}
-      okText="Add question"
+      okText={question ? "Save changes" : "Add question"}
       confirmLoading={isSaving}
       destroyOnHidden
     >
@@ -109,6 +145,18 @@ export const QuestionCreateModal = ({
           rules={[{ required: true, whitespace: true, message: "Enter a question." }]}
         >
           <Input maxLength={500} placeholder="What can you see in this image?" />
+        </Form.Item>
+        <Form.Item label="Reference image" name="referenceImage">
+          <Select
+            allowClear
+            placeholder="No reference image"
+            options={referenceImages.map((image) => ({
+              label: image.path.split("/").pop() ?? image.path,
+              value: image.id,
+            }))}
+            showSearch
+            optionFilterProp="label"
+          />
         </Form.Item>
         <Form.Item label="Answer type" name="type" rules={[{ required: true }]}>
           <Select

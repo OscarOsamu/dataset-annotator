@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { Button, Checkbox, Image, InputNumber, Progress, Radio, Typography } from "antd";
+import { QuestionCircleOutlined } from "@ant-design/icons";
+import { Button, Checkbox, Image, InputNumber, Modal, Progress, Radio, Tooltip, Typography } from "antd";
 import styled from "styled-components";
-import type { Answer, Question } from "../../api";
+import type { Answer, Image as DatasetImage, Question } from "../../api";
 import type { AnswerDraft } from "../Hooks/useAnnotationSession";
 import { formatAnswer, getImageUrl, type QuestionAnswerRow } from "../Annotation/Annotation";
 
@@ -150,6 +151,7 @@ export const AnnotationWorkbench = ({
 
 interface AnnotationQuestionFormProps {
   question: Question;
+  referenceImage?: DatasetImage;
   answer?: Answer;
   saving: boolean;
   onSave: (draft: AnswerDraft) => void;
@@ -157,6 +159,7 @@ interface AnnotationQuestionFormProps {
 
 export const AnnotationQuestionForm = ({
   question,
+  referenceImage,
   answer,
   saving,
   onSave,
@@ -171,6 +174,7 @@ export const AnnotationQuestionForm = ({
     answer?.answer_boolean ?? null,
   );
   const [isUnclear, setIsUnclear] = useState(answer?.is_unclear ?? false);
+  const [referenceImageOpen, setReferenceImageOpen] = useState(false);
 
   const canSave = isUnclear || (
     question.type === "INT"
@@ -186,10 +190,39 @@ export const AnnotationQuestionForm = ({
     <QuestionPanel>
       <div>
         <Typography.Text type="secondary">Question</Typography.Text>
-        <Typography.Title level={3} style={{ marginTop: 6 }}>
-          {question.text}
-        </Typography.Title>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <Typography.Title level={3} style={{ marginTop: 6, marginBottom: 0 }}>
+            {question.text}
+          </Typography.Title>
+          {referenceImage && (
+            <Tooltip title="View reference image">
+              <Button
+                type="text"
+                aria-label="View reference image"
+                icon={<QuestionCircleOutlined />}
+                onClick={() => setReferenceImageOpen(true)}
+              />
+            </Tooltip>
+          )}
+        </div>
       </div>
+
+      <Modal
+        title="Reference image"
+        open={referenceImageOpen}
+        onCancel={() => setReferenceImageOpen(false)}
+        footer={null}
+        centered
+      >
+        {referenceImage && (
+          <Image
+            src={getImageUrl(referenceImage.path)}
+            alt={referenceImage.path.split("/").pop() ?? "Question reference"}
+            preview={false}
+            style={{ display: "block", maxWidth: "100%", maxHeight: "70vh", objectFit: "contain", margin: "0 auto" }}
+          />
+        )}
+      </Modal>
 
       {question.type === "INT" ? (
         <InputNumber

@@ -21,6 +21,7 @@ export const DatasetSetupPage = () => {
   } = useDatasetInfos(datasetId);
   const {
     images,
+    referenceImages,
     questions,
     loading: contentLoading,
     error: contentError,
@@ -96,6 +97,7 @@ export const DatasetSetupPage = () => {
           <SetupSection>
             <DatasetQuestionsPanel
               datasetId={datasetInfos.id}
+              referenceImages={referenceImages}
               questions={questions}
               onCreated={reloadContent}
             />

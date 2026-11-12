@@ -41,16 +41,26 @@ const loadNextTaskPage = async (
   datasetId: number,
   initialCursor: number | null,
   initialStartIndex: number,
+  initialReferenceImages: AnnotationDatasetData["reference_images"] = [],
 ): Promise<TaskPageResult> => {
   let cursor = initialCursor;
   let startIndex = initialStartIndex;
+  let referenceImages = initialReferenceImages;
 
   while (true) {
-    const data = await loadAnnotationPage(datasetId, cursor);
+    const data = await loadAnnotationPage(datasetId, cursor, true);
+    if (data.reference_images.length > 0) {
+      referenceImages = data.reference_images;
+    }
     const firstTask = data.tasks[0];
 
     if (firstTask || data.next_cursor === null || data.questions.length === 0) {
-      return { data, cursor, startIndex, firstTask };
+      return {
+        data: { ...data, reference_images: referenceImages },
+        cursor,
+        startIndex,
+        firstTask,
+      };
     }
 
     startIndex += data.images.length;
@@ -243,6 +253,7 @@ export const useAnnotationSession = (datasetId: number) => {
         datasetId,
         pageData.next_cursor,
         pageStartIndex + currentImages.length,
+        pageData.reference_images,
       );
       activateTaskPage(result);
     } catch (error) {
@@ -261,6 +272,7 @@ export const useAnnotationSession = (datasetId: number) => {
 
   return {
     images: currentImages,
+    referenceImages: hasLoadedDataset ? pageData?.reference_images ?? [] : [],
     questions: currentQuestions,
     answersByImage: currentAnswerIndex,
     currentImage,

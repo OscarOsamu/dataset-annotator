@@ -92,6 +92,7 @@ export const DatasetEditTab = ({
       <section>
         <DatasetQuestionsPanel
           datasetId={dataset.id}
+          referenceImages={referenceImages}
           questions={questions}
           onCreated={onContentUpdated}
         />
