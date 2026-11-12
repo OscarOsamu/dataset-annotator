@@ -24,7 +24,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
       <AntLayout>
         <Header style={{ padding: 0, textAlign: "center", paddingRight: 20 }}>
-           <h1 style={{alignContent:"center"}}> An app to annotate your dataset for CNN training or others purpose </h1>
+           <span style={{alignContent:"center", fontSize:"30px", fontWeight:"bold" }}> An app to annotate your dataset for CNN training or other purposes </span>
         </Header>
         <Content style={{ margin: 16 }}>
             {/* <AppBreadcrumb /> */}
