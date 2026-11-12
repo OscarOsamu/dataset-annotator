@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Button, Carousel, Empty, Pagination, Popconfirm } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { Button, Empty, Pagination, Popconfirm } from "antd";
+import { DeleteOutlined, LeftOutlined, RightOutlined } from "@ant-design/icons";
 import styled from "styled-components";
 import type { Answer, Image, Question } from "../../api";
 import { formatAnswer, getImageUrl } from "../Annotation/Annotation";
@@ -41,7 +41,21 @@ const CarouselViewport = styled.div`
 
 const CarouselSlide = styled.div`
   position: relative;
-  padding: 8px 36px 30px;
+  padding: 8px 36px 12px;
+`;
+
+const CarouselImageName = styled.div`
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  text-align: center;
+  font-weight: 600;
+`;
+
+const CarouselControls = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
 `;
 
 const ReferenceImage = styled.img`
@@ -218,39 +232,59 @@ export const DatasetImageCarousel = ({
   onRemove,
   removingImageId,
 }: DatasetImageCarouselProps) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
   if (images.length === 0) return <Empty description={emptyDescription} />;
+
+  const activeIndex = Math.min(currentIndex, images.length - 1);
+  const image = images[activeIndex];
+  const fileName = image.path.split("/").pop() ?? image.path;
 
   return (
     <CarouselViewport>
-      <Carousel arrows infinite={false}>
-        {images.map((image) => (
-          <CarouselSlide key={image.id}>
-            <ReferenceImage
-              src={getImageUrl(image.path)}
-              alt={image.path.split("/").pop() ?? image.path}
-              loading="lazy"
+      <CarouselSlide>
+        <ReferenceImage
+          src={getImageUrl(image.path)}
+          alt={fileName}
+          loading="lazy"
+        />
+        <CarouselImageName>{fileName}</CarouselImageName>
+        {onRemove && (
+          <Popconfirm
+            title="Remove reference image?"
+            description="Questions using this image will no longer reference it."
+            okText="Remove"
+            okButtonProps={{ danger: true }}
+            onConfirm={() => onRemove(image)}
+          >
+            <Button
+              danger
+              aria-label="Remove reference image"
+              title="Remove reference image"
+              icon={<DeleteOutlined />}
+              loading={removingImageId === image.id}
+              style={{ position: "absolute", top: 16, right: 44 }}
             />
-            {onRemove && (
-              <Popconfirm
-                title="Remove reference image?"
-                description="Questions using this image will no longer reference it."
-                okText="Remove"
-                okButtonProps={{ danger: true }}
-                onConfirm={() => onRemove(image)}
-              >
-                <Button
-                  danger
-                  aria-label="Remove reference image"
-                  title="Remove reference image"
-                  icon={<DeleteOutlined />}
-                  loading={removingImageId === image.id}
-                  style={{ position: "absolute", top: 16, right: 44 }}
-                />
-              </Popconfirm>
-            )}
-          </CarouselSlide>
-        ))}
-      </Carousel>
+          </Popconfirm>
+        )}
+      </CarouselSlide>
+      {images.length > 1 && (
+        <CarouselControls>
+          <Button
+            aria-label="Previous image"
+            icon={<LeftOutlined />}
+            disabled={activeIndex === 0}
+            onClick={() => setCurrentIndex(Math.max(activeIndex - 1, 0))}
+          />
+          <span aria-live="polite">{activeIndex + 1} / {images.length}</span>
+          <Button
+            aria-label="Next image"
+            icon={<RightOutlined />}
+            disabled={activeIndex === images.length - 1}
+            onClick={() => setCurrentIndex(Math.min(activeIndex + 1, images.length - 1))}
+          />
+        </CarouselControls>
+      )}
     </CarouselViewport>
   );
 };
