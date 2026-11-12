@@ -6,7 +6,6 @@ import { ApiApi } from "../../api";
 import { apiConfig } from "../../configuration";
 import { useDatasetInfos } from "../Hooks/useDatasetInfos";
 import { useNotify } from "../Contexts/NotificationProvider";
-import { QuestionsStatsGraphs } from "../Graphs/QuestionsStatsGraphs";
 import { DatasetImageMasonry } from "../Images/DatasetImageViews";
 import { ResumeAnnotationButton } from "../Buttons/ResumeAnnotationButton";
 import { DatasetEditTab } from "../Tabs/DatasetEditTab";
@@ -155,11 +154,6 @@ export const DatasetInfoPage = () => {
                 contentFallback={contentFallback}
               />
             ),
-          },
-          {
-            key: "stats",
-            label: "Stats",
-            children: <QuestionsStatsGraphs questions={questions} />,
           },
           {
             key: "images",
